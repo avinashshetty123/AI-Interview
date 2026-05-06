@@ -1,35 +1,75 @@
 import { useState } from 'react'
 import { FiEdit3, FiZap, FiRefreshCw, FiCheck } from 'react-icons/fi'
 
-const Summary = ({ data, onChange, onNext, onPrev, resumeData }) => {
+const Summary = ({ data, onChange, onNext, onPrev, resumeData, onOptimizeText }) => {
   const [isGenerating, setIsGenerating] = useState(false)
+  const [isOptimizing, setIsOptimizing] = useState(false)
   const [suggestions, setSuggestions] = useState([])
+
+  const getSkillName = (skill) => {
+    if (typeof skill === 'string') return skill
+    if (skill && typeof skill === 'object') return skill.name || skill.label || skill.title || skill.value || ''
+    return ''
+  }
+
+  const cleanSummaryText = (text) => {
+    return String(text || '')
+      .replace(/\[object Object\]/gi, '')
+      .replace(/\s+,/g, ',')
+      .replace(/,\s*,+/g, ',')
+      .replace(/\s{2,}/g, ' ')
+      .trim()
+  }
 
   const generateAISummary = async () => {
     setIsGenerating(true)
     try {
-      const response = await fetch('http://localhost:8080/api/resume/generate-summary', {
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL || 'http://localhost:8080/api'}/resume/generate-summary`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
         body: JSON.stringify({
           personalInfo: resumeData.personalInfo,
-          experience: resumeData.experience,
-          education: resumeData.education,
           skills: resumeData.skills,
-          projects: resumeData.projects
+          experience: resumeData.experience,
+          education: resumeData.education
         })
       })
       
       const result = await response.json()
       if (result.success) {
-        onChange(null, 'summary', result.summary)
-        setSuggestions(result.suggestions || [])
+        onChange(null, 'summary', cleanSummaryText(result.summary))
       }
     } catch (error) {
       console.error('Error generating summary:', error)
     } finally {
       setIsGenerating(false)
+    }
+  }
+
+  const optimizeSummary = async () => {
+    if (!onOptimizeText || !data?.trim()) return
+    
+    setIsOptimizing(true)
+    try {
+      const optimizedText = await onOptimizeText(
+        data, 
+        'summary',
+        { 
+          skills: [...(resumeData.skills?.technical || []), ...(resumeData.skills?.soft || [])]
+            .map(getSkillName)
+            .filter(Boolean),
+          experience: resumeData.experience?.length || 0
+        }
+      )
+      
+      if (optimizedText && optimizedText !== data) {
+        onChange(null, 'summary', cleanSummaryText(optimizedText))
+      }
+    } catch (error) {
+      console.error('Failed to optimize summary:', error)
+    } finally {
+      setIsOptimizing(false)
     }
   }
 
@@ -102,8 +142,24 @@ const Summary = ({ data, onChange, onNext, onPrev, resumeData }) => {
           <label className="block text-sm font-semibold text-gray-700">
             Professional Summary
           </label>
-          <div className={`text-sm font-medium ${isOptimal ? 'text-green-600' : 'text-orange-600'}`}>
-            {wordCount} words {isOptimal ? '✓ Optimal' : '(50-150 recommended)'}
+          <div className="flex items-center gap-2">
+            {onOptimizeText && (
+              <button
+                onClick={optimizeSummary}
+                disabled={isOptimizing || !data?.trim()}
+                className="px-3 py-1 text-sm bg-blue-100 text-blue-700 rounded-md hover:bg-blue-200 transition-colors disabled:opacity-50 flex items-center gap-1"
+              >
+                {isOptimizing ? (
+                  <FiRefreshCw size={14} className="animate-spin" />
+                ) : (
+                  <FiZap size={14} />
+                )}
+                {isOptimizing ? 'Optimizing...' : 'AI Optimize'}
+              </button>
+            )}
+            <div className={`text-sm font-medium ${isOptimal ? 'text-green-600' : 'text-orange-600'}`}>
+              {wordCount} words {isOptimal ? '✓ Optimal' : '(50-150 recommended)'}
+            </div>
           </div>
         </div>
         

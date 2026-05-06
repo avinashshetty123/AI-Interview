@@ -55,7 +55,7 @@ class InterviewController {
       // Generate remaining questions with AI if needed
       const remainingQuestions = parseInt(numQuestions) - questions.length;
       if (remainingQuestions > 0) {
-        const aiQuestions = await aiService.generateQuestions(keywords, remainingQuestions, difficulty);
+        const aiQuestions = await aiService.generateQuestions(keywords, remainingQuestions, difficulty, resumeText);
         questions = [...questions, ...aiQuestions];
         
         // Add new AI questions to bank for future use
@@ -66,7 +66,7 @@ class InterviewController {
       // Create new session
       const session = new Session({
         userId,
-        resumeText: req.file.originalname,
+        resumeText: resumeText.substring(0, 5000), // store actual resume text (capped)
         fileName: req.file.originalname,
         status: 'ACTIVE',
         difficulty,

@@ -29,9 +29,12 @@ router.use('/resume', resumeRoutes);
 
 // 404 handler for API routes
 router.use('*', (req, res) => {
+  console.log('404 - Route not found:', req.method, req.originalUrl);
   res.status(404).json({ 
     success: false, 
     error: 'API route not found',
+    requestedRoute: req.originalUrl,
+    method: req.method,
     availableRoutes: [
       'GET /api/health',
       'POST /api/upload-resume',
@@ -45,7 +48,10 @@ router.use('*', (req, res) => {
       'GET /api/analysis-status/:sessionId',
       'POST /api/resume/save',
       'POST /api/resume/generate',
-      'GET /api/resume/saved'
+      'GET /api/resume/saved',
+      'POST /api/resume/parse-for-builder',
+      'GET /api/resume/parse-test',
+      'POST /api/resume/parse-test-post'
     ]
   });
 });

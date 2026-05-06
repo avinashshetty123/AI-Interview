@@ -45,6 +45,12 @@ app.use((req, res, next) => {
   next();
 });
 
+// Serve logo as static asset (used in resume templates)
+app.get('/logo.png', (req, res) => {
+  const logoPath = require('path').join(__dirname, '../frontend/src/assets/Logo.png')
+  res.sendFile(logoPath)
+})
+
 // Routes
 app.use('/api', routes);
 

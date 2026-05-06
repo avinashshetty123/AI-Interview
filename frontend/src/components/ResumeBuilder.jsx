@@ -3,7 +3,7 @@ import React from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card'
 import { Button } from './ui/button'
 import { Progress } from './ui/progress'
-import { FiUser, FiEdit3, FiBriefcase, FiBook, FiCode, FiTarget, FiAward, FiEye, FiSave, FiClock } from 'react-icons/fi'
+import { FiUser, FiEdit3, FiBriefcase, FiBook, FiCode, FiTarget, FiAward, FiEye, FiSave, FiClock, FiUpload, FiZap, FiRefreshCw } from 'react-icons/fi'
 import { useAuth } from '../context/authContext'
 import { saveResumeData, loadResumeData, getDefaultResumeData, mergeWithUserData, useAutoSave } from '../utils/resumeStorage'
 
@@ -16,6 +16,9 @@ import Projects from './resume/Projects'
 import Certifications from './resume/Certifications'
 import Summary from './resume/Summary'
 import PDFPreview from './resume/PDFPreview'
+import ResumeUploadParser from './resume/ResumeUploadParser'
+
+import logo from '../assets/Logo.png'
 
 const ResumeBuilder = ({ onBack }) => {
   const { user } = useAuth()
@@ -23,19 +26,21 @@ const ResumeBuilder = ({ onBack }) => {
   const [resumeData, setResumeData] = useState(getDefaultResumeData())
   const [atsScore, setAtsScore] = useState(0)
   const [loading, setLoading] = useState(true)
+  const [showUploadParser, setShowUploadParser] = useState(false)
+  const [aiOptimizing, setAiOptimizing] = useState(false)
 
   // Auto-save functionality
   const { lastSaved, isSaving } = useAutoSave(resumeData, true)
 
   const steps = [
-    { title: 'Personal Info', icon: FiUser, component: PersonalInfo },
-    { title: 'Experience', icon: FiBriefcase, component: Experience },
-    { title: 'Education', icon: FiBook, component: Education },
-    { title: 'Skills', icon: FiCode, component: Skills },
-    { title: 'Projects', icon: FiTarget, component: Projects },
-    { title: 'Certifications', icon: FiAward, component: Certifications },
-    { title: 'Summary', icon: FiEdit3, component: Summary },
-    { title: 'Preview & Download', icon: FiEye, component: PDFPreview }
+    { title: 'Personal Info',     icon: FiUser,     component: PersonalInfo,  required: true  },
+    { title: 'Experience',        icon: FiBriefcase,component: Experience,    required: false },
+    { title: 'Projects',          icon: FiTarget,   component: Projects,      required: false },
+    { title: 'Education',         icon: FiBook,     component: Education,     required: true  },
+    { title: 'Skills',            icon: FiCode,     component: Skills,        required: true  },
+    { title: 'Certifications',    icon: FiAward,    component: Certifications,required: false },
+    { title: 'Summary',           icon: FiEdit3,    component: Summary,       required: true  },
+    { title: 'Preview & Download',icon: FiEye,      component: PDFPreview,    required: true  },
   ]
 
   // Load saved data and merge with user data on mount
@@ -103,20 +108,30 @@ const ResumeBuilder = ({ onBack }) => {
       }
     }
 
-    // Experience (25 points)
-    if (experience?.length >= 2) score += 25
-    else if (experience?.length === 1) score += 15
+    // Education (25 points) - Now required
+    if (education?.length >= 1) {
+      score += 25
+      // Bonus for complete education entries
+      const completeEducation = education.filter(edu => 
+        edu.degree?.trim() && edu.institution?.trim()
+      ).length
+      if (completeEducation === education.length) {
+        score += 5 // Bonus for complete entries
+      }
+    }
 
-    // Education (15 points)
-    if (education?.length >= 1) score += 15
+    // Experience (20 points) - Now optional but valuable
+    if (experience?.length >= 2) score += 20
+    else if (experience?.length === 1) score += 12
 
-    // Skills (15 points)
+    // Skills (10 points)
     const totalSkills = (skills?.technical?.length || 0) + (skills?.soft?.length || 0)
-    if (totalSkills >= 10) score += 15
-    else if (totalSkills >= 5) score += 10
+    if (totalSkills >= 10) score += 10
+    else if (totalSkills >= 5) score += 6
 
-    // Projects (5 points)
-    if (projects?.length >= 1) score += 5
+    // Projects (5 points) - Optional but adds value
+    if (projects?.length >= 2) score += 5
+    else if (projects?.length === 1) score += 3
 
     setAtsScore(Math.min(100, Math.round(score)))
   }
@@ -164,6 +179,131 @@ const ResumeBuilder = ({ onBack }) => {
     }
   }
 
+  const handleResumeDataParsed = (parsedData, parsedAtsScore, suggestions) => {
+    setResumeData(parsedData)
+    setAtsScore(parsedAtsScore || 0)
+    setShowUploadParser(false)
+    
+    // Show success message
+    alert(`Resume parsed successfully! ATS Score: ${parsedAtsScore || 0}%\n\nSuggestions: ${suggestions?.slice(0, 2).join(', ') || 'None'}`)
+  }
+
+  const optimizeAllContent = async () => {
+    setAiOptimizing(true)
+    try {
+      const optimizationTasks = []
+      
+      // Optimize experience descriptions
+      resumeData.experience?.forEach((exp, index) => {
+        if (exp.description) {
+          optimizationTasks.push({
+            text: exp.description,
+            type: 'experience',
+            path: ['experience', index, 'description']
+          })
+        }
+      })
+      
+      // Optimize project descriptions
+      resumeData.projects?.forEach((proj, index) => {
+        if (proj.description) {
+          optimizationTasks.push({
+            text: proj.description,
+            type: 'project',
+            path: ['projects', index, 'description']
+          })
+        }
+      })
+      
+      // Optimize summary
+      if (resumeData.summary) {
+        optimizationTasks.push({
+          text: resumeData.summary,
+          type: 'summary',
+          path: ['summary'],
+          context: {
+            skills: [...(resumeData.skills?.technical || []), ...(resumeData.skills?.soft || [])],
+            experience: resumeData.experience?.length || 0
+          }
+        })
+      }
+      
+      if (optimizationTasks.length === 0) {
+        alert('No content to optimize. Please add some descriptions first.')
+        return
+      }
+      
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL || 'http://localhost:8080/api'}/resume/optimize-bulk`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify({ items: optimizationTasks }),
+      })
+      
+      const data = await response.json()
+      
+      if (data.success) {
+        const newResumeData = { ...resumeData }
+        
+        data.items.forEach((item) => {
+          if (item.success && item.optimizedText) {
+            // Navigate to the nested property and update it
+            let current = newResumeData
+            for (let i = 0; i < item.path.length - 1; i++) {
+              current = current[item.path[i]]
+            }
+            current[item.path[item.path.length - 1]] = item.optimizedText
+          }
+        })
+        
+        setResumeData(newResumeData)
+        alert(`Successfully optimized ${data.items.filter(i => i.success).length} text sections for better ATS compatibility!`)
+      } else {
+        alert('Failed to optimize content: ' + data.error)
+      }
+    } catch (error) {
+      console.error('Optimization error:', error)
+      alert('Failed to optimize content. Please try again.')
+    } finally {
+      setAiOptimizing(false)
+    }
+  }
+  
+  const generateAISkills = async () => {
+    try {
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL || 'http://localhost:8080/api'}/resume/generate-skills`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify({
+          experience: resumeData.experience,
+          projects: resumeData.projects,
+          education: resumeData.education
+        }),
+      })
+      
+      const data = await response.json()
+      
+      if (data.success) {
+        setResumeData(prev => ({
+          ...prev,
+          skills: {
+            technical: [...new Set([...(prev.skills?.technical || []), ...data.skills.technical])],
+            soft: [...new Set([...(prev.skills?.soft || []), ...data.skills.soft])]
+          }
+        }))
+        alert('AI-generated skills have been added to your resume!')
+      }
+    } catch (error) {
+      console.error('Skills generation error:', error)
+      alert('Failed to generate skills. Please try again.')
+    }
+  }
+
   const renderStepContent = () => {
     const StepComponent = steps[currentStep].component
     
@@ -189,15 +329,16 @@ const ResumeBuilder = ({ onBack }) => {
     }
 
     const getStepData = () => {
-      switch (currentStep) {
-        case 0: return resumeData.personalInfo
-        case 1: return resumeData.experience
-        case 2: return resumeData.education
-        case 3: return resumeData.skills
-        case 4: return resumeData.projects
-        case 5: return resumeData.certifications
-        case 6: return resumeData.summary
-        case 7: return resumeData
+      const stepTitle = steps[currentStep]?.title
+      switch (stepTitle) {
+        case 'Personal Info': return resumeData.personalInfo
+        case 'Experience': return resumeData.experience
+        case 'Education': return resumeData.education
+        case 'Skills': return resumeData.skills
+        case 'Projects': return resumeData.projects
+        case 'Certifications': return resumeData.certifications
+        case 'Summary': return resumeData.summary
+        case 'Preview & Download': return resumeData
         default: return resumeData
       }
     }
@@ -207,11 +348,29 @@ const ResumeBuilder = ({ onBack }) => {
       onChange: handleDataChange,
       onNext: handleNext,
       onPrev: handlePrev,
-      resumeData: resumeData
+      resumeData: resumeData,
+      onOptimizeText: async (text, type, context) => {
+        try {
+          const response = await fetch(`${import.meta.env.VITE_BACKEND_URL || 'http://localhost:8080/api'}/resume/optimize-text`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            credentials: 'include',
+            body: JSON.stringify({ text, type, context }),
+          })
+          
+          const data = await response.json()
+          return data.success ? data.optimizedText : text
+        } catch (error) {
+          console.error('Text optimization error:', error)
+          return text
+        }
+      }
     }
 
     // Special handling for PDFPreview
-    if (currentStep === 7) {
+    if (steps[currentStep]?.title === 'Preview & Download') {
       return (
         <StepComponent
           {...commonProps}
@@ -224,6 +383,19 @@ const ResumeBuilder = ({ onBack }) => {
     }
 
     return <StepComponent {...commonProps} />
+  }
+
+  if (showUploadParser) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-purple-50 to-indigo-100">
+        <div className="container mx-auto px-6 py-8">
+          <ResumeUploadParser 
+            onResumeDataParsed={handleResumeDataParsed}
+            onCancel={() => setShowUploadParser(false)}
+          />
+        </div>
+      </div>
+    )
   }
 
   if (loading) {
@@ -244,15 +416,13 @@ const ResumeBuilder = ({ onBack }) => {
           
           {/* Header */}
           <div className="flex justify-between items-center mb-8">
-            <div>
-              <h1 className="text-4xl font-bold text-gray-800 mb-2">
-                🚀 ATS Resume Builder
-              </h1>
-              <p className="text-xl text-gray-600">
-                Create a perfect resume with 100% ATS compatibility
-              </p>
-              <div className="mt-2 text-sm text-gray-500">
-                Step {currentStep + 1} of {steps.length}: {steps[currentStep].title}
+            <div className="flex items-center gap-3">
+              <img src={logo} alt="Jankoti" className="h-9 w-auto" />
+              <div>
+                <p className="text-xl text-gray-600">ATS Resume Builder</p>
+                <div className="text-sm text-gray-500">
+                  Step {currentStep + 1} of {steps.length}: {steps[currentStep].title}
+                </div>
               </div>
             </div>
             <div className="flex items-center gap-4">
@@ -270,6 +440,27 @@ const ResumeBuilder = ({ onBack }) => {
                   </>
                 ) : null}
               </div>
+              <Button 
+                onClick={() => setShowUploadParser(true)} 
+                variant="outline" 
+                className="flex items-center gap-2"
+              >
+                <FiUpload size={16} />
+                Import Resume
+              </Button>
+              <Button 
+                onClick={optimizeAllContent} 
+                disabled={aiOptimizing}
+                variant="outline" 
+                className="flex items-center gap-2 bg-gradient-to-r from-blue-500 to-purple-500 text-white border-0 hover:shadow-lg"
+              >
+                {aiOptimizing ? (
+                  <FiRefreshCw size={16} className="animate-spin" />
+                ) : (
+                  <FiZap size={16} />
+                )}
+                {aiOptimizing ? 'Optimizing...' : 'AI Optimize'}
+              </Button>
               <Button onClick={manualSave} variant="outline" className="flex items-center gap-2">
                 <FiSave size={16} />
                 Save
@@ -283,22 +474,31 @@ const ResumeBuilder = ({ onBack }) => {
           {/* Progress Steps */}
           <div className="mb-8">
             <div className="flex flex-wrap justify-between items-center mb-4 gap-2">
-              {steps.map((step, index) => (
-                <div
-                  key={index}
-                  className={`flex items-center space-x-2 px-3 py-2 rounded-lg cursor-pointer transition-all text-sm ${
-                    index === currentStep
-                      ? 'bg-violet-600 text-white shadow-lg'
-                      : index < currentStep
-                      ? 'bg-green-100 text-green-800'
-                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                  }`}
-                  onClick={() => setCurrentStep(index)}
-                >
-                  {React.createElement(step.icon, { size: 16 })}
-                  <span className="font-medium hidden sm:block">{step.title}</span>
-                </div>
-              ))}
+              {steps.map((step, index) => {
+                const isCompleted = index < currentStep
+                const isCurrent = index === currentStep
+                const isRequired = step.required
+                
+                return (
+                  <div
+                    key={index}
+                    className={`flex items-center space-x-2 px-3 py-2 rounded-lg cursor-pointer transition-all text-sm relative ${
+                      isCurrent
+                        ? 'bg-violet-600 text-white shadow-lg'
+                        : isCompleted
+                        ? 'bg-green-100 text-green-800'
+                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                    }`}
+                    onClick={() => setCurrentStep(index)}
+                  >
+                    {React.createElement(step.icon, { size: 16 })}
+                    <span className="font-medium hidden sm:block">{step.title}</span>
+                    {isRequired && (
+                      <span className="text-xs text-red-500 ml-1">*</span>
+                    )}
+                  </div>
+                )
+              })}
             </div>
             <Progress value={(currentStep / (steps.length - 1)) * 100} className="h-2" />
           </div>

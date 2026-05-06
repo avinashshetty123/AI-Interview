@@ -134,21 +134,78 @@ class ResumeParser {
 
   extractProjects(sections) {
     if (!sections.projects) return [];
-    
+
+    // Join all lines, replacing lone "-" separators with a bullet marker
+    // then re-split cleanly
+    const rawLines = sections.projects;
+    const merged = [];
+
+    for (let i = 0; i < rawLines.length; i++) {
+      const trimmed = rawLines[i].trim();
+      if (!trimmed) continue;
+
+      // Lone dash/bullet = the NEXT line is bullet content
+      if (/^[-\u2022\*]$/.test(trimmed)) {
+        // peek at next line and prepend bullet marker
+        if (i + 1 < rawLines.length) {
+          merged.push('\u2022 ' + rawLines[i + 1].trim());
+          i++; // skip next line, already consumed
+        }
+        continue;
+      }
+
+      // Line starting with "- text" or "• text"
+      if (/^[-\u2022\*]\s+/.test(trimmed)) {
+        merged.push('\u2022 ' + trimmed.replace(/^[-\u2022\*]\s+/, ''));
+        continue;
+      }
+
+      merged.push(trimmed);
+    }
+
+    // Now parse merged lines: title lines contain "|", bullet lines start with "•"
     const projects = [];
-    let currentProject = null;
-    
-    for (const line of sections.projects) {
-      if (line.length > 10 && !line.startsWith('•') && !line.startsWith('-')) {
-        if (currentProject) projects.push(currentProject);
-        currentProject = { title: line, description: '' };
-      } else if (currentProject) {
-        currentProject.description += (currentProject.description ? ' ' : '') + line.replace(/^[•\-\*]\s*/, '');
+    let current = null;
+
+    for (const line of merged) {
+      const isBullet = line.startsWith('\u2022 ');
+
+      if (!isBullet && line.includes('|')) {
+        // Project title line: "Name| Subtitle"
+        if (current) projects.push(current);
+        const pipeIdx = line.indexOf('|');
+        current = {
+          title: line.substring(0, pipeIdx).trim(),
+          description: line.substring(pipeIdx + 1).trim(),
+          highlights: []
+        };
+      } else if (!isBullet && !current) {
+        // Plain title with no pipe (fallback)
+        current = { title: line, description: '', highlights: [] };
+      } else if (isBullet && current) {
+        const content = line.replace('\u2022 ', '').trim();
+        // If last highlight ends without punctuation, it may be a wrapped continuation
+        if (
+          current.highlights.length > 0 &&
+          !/[.!?]$/.test(current.highlights[current.highlights.length - 1]) &&
+          current.highlights[current.highlights.length - 1].split(' ').length < 8
+        ) {
+          current.highlights[current.highlights.length - 1] += ' ' + content;
+        } else {
+          current.highlights.push(content);
+        }
+      } else if (!isBullet && current) {
+        // Plain text after a title but before any bullet — append to description
+        current.description += (current.description ? ' ' : '') + line;
       }
     }
-    
-    if (currentProject) projects.push(currentProject);
-    return projects;
+
+    if (current) projects.push(current);
+
+    return projects.map(p => ({
+      ...p,
+      description: p.description || (p.highlights[0] || ''),
+    }));
   }
 
   extractExperience(sections) {

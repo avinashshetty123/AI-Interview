@@ -9,8 +9,8 @@ const generateAISummary = async (req, res) => {
       name: personalInfo?.fullName || 'Professional',
       experience: experience || [],
       education: education || [],
-      technicalSkills: skills?.technical || [],
-      softSkills: skills?.soft || [],
+      technicalSkills: normalizeSkillList(skills?.technical),
+      softSkills: normalizeSkillList(skills?.soft),
       projects: projects || []
     };
 
@@ -18,11 +18,11 @@ const generateAISummary = async (req, res) => {
     const summaryPrompt = `
 Create a professional ATS-optimized resume summary for ${profile.name} based on the following information:
 
-Experience: ${profile.experience.map(exp => `${exp.title} at ${exp.company} - ${exp.description}`).join('; ')}
+Experience: ${profile.experience.map(exp => `${exp.jobTitle || exp.title || 'Role'} at ${exp.company || 'Company'} - ${exp.description || ''}`).join('; ')}
 Education: ${profile.education.map(edu => `${edu.degree} from ${edu.institution}`).join('; ')}
 Technical Skills: ${profile.technicalSkills.join(', ')}
 Soft Skills: ${profile.softSkills.join(', ')}
-Projects: ${profile.projects.map(proj => proj.title).join(', ')}
+Projects: ${profile.projects.map(proj => proj.name || proj.title).filter(Boolean).join(', ')}
 
 Requirements:
 - 50-150 words
@@ -47,7 +47,7 @@ Generate 3 different summary variations and provide ATS optimization tips.
 
     res.json({
       success: true,
-      summary: summaryVariations[0],
+      summary: sanitizeSummary(summaryVariations[0]),
       suggestions: summaryVariations,
       tips: [
         "Include specific metrics and achievements",
@@ -71,20 +71,48 @@ Generate 3 different summary variations and provide ATS optimization tips.
 const generateTemplateSummary = (profile) => {
   const { experience, education, technicalSkills, softSkills } = profile;
   
-  const yearsExp = experience.length > 0 ? `${experience.length}+` : 'Multiple';
-  const primarySkills = technicalSkills.slice(0, 3).join(', ');
+  const experienceLabel = getExperienceLabel(experience.length);
+  const primarySkills = technicalSkills.slice(0, 3).join(', ') || 'relevant tools and technologies';
   const topEducation = education[0]?.degree || 'relevant education';
-  const keyStrengths = softSkills.slice(0, 2).join(' and ') || 'leadership and communication';
+  const keyStrengths = softSkills.slice(0, 2).join(' and ') || 'problem-solving and communication';
 
   const templates = [
-    `${yearsExp} years experienced professional with expertise in ${primarySkills}. Proven track record of delivering innovative solutions and driving business growth. Strong background in ${topEducation} with exceptional ${keyStrengths} skills. Committed to excellence and continuous learning in dynamic environments.`,
+    `${experienceLabel} professional with expertise in ${primarySkills}. Proven track record of delivering practical solutions, learning quickly, and contributing to team goals. Strong background in ${topEducation} with exceptional ${keyStrengths} skills. Committed to excellence and continuous learning in dynamic environments.`,
     
-    `Results-oriented professional with ${yearsExp} years of experience specializing in ${primarySkills}. Demonstrated ability to lead cross-functional teams and implement strategic initiatives. Educational foundation in ${topEducation} complemented by strong ${keyStrengths} capabilities.`,
+    `Results-oriented ${experienceLabel.toLowerCase()} professional specializing in ${primarySkills}. Demonstrated ability to collaborate with cross-functional teams and contribute to strategic initiatives. Educational foundation in ${topEducation} complemented by strong ${keyStrengths} capabilities.`,
     
-    `Dynamic professional combining technical expertise in ${primarySkills} with ${yearsExp} years of hands-on experience. Strong analytical and problem-solving abilities with proven success in project management and team collaboration. ${topEducation} graduate with focus on innovation and quality delivery.`
+    `Dynamic ${experienceLabel.toLowerCase()} professional combining technical expertise in ${primarySkills} with strong analytical and problem-solving abilities. Proven success in project execution and team collaboration. ${topEducation} graduate with focus on innovation and quality delivery.`
   ];
 
   return templates;
+};
+
+const getExperienceLabel = (count) => {
+  if (!count) return 'Entry-level';
+  if (count === 1) return '1+ year experienced';
+  return `${count}+ years experienced`;
+};
+
+const normalizeSkillList = (skills = []) => {
+  return (Array.isArray(skills) ? skills : [])
+    .map(skill => {
+      if (typeof skill === 'string') return skill;
+      if (skill && typeof skill === 'object') {
+        return skill.name || skill.label || skill.title || skill.value || '';
+      }
+      return '';
+    })
+    .map(skill => String(skill).trim())
+    .filter(Boolean);
+};
+
+const sanitizeSummary = (summary = '') => {
+  return String(summary)
+    .replace(/\[object Object\]/gi, '')
+    .replace(/\s+,/g, ',')
+    .replace(/,\s*,+/g, ',')
+    .replace(/\s{2,}/g, ' ')
+    .trim();
 };
 
 module.exports = {

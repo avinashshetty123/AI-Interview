@@ -7,8 +7,8 @@ class AIService {
     this.model = 'llama-3.1-8b-instant';
   }
 
-  async generateQuestions(keywords, numQuestions = 10, difficulty = 'medium') {
-    const context = this.buildContext(keywords);
+  async generateQuestions(keywords, numQuestions = 10, difficulty = 'medium', resumeText = '') {
+    const context = this.buildContext(keywords, resumeText);
     const prompt = this.buildQuestionPrompt(context, numQuestions, difficulty);
     
     try {
@@ -56,8 +56,12 @@ class AIService {
     }
   }
 
-  buildContext(keywords) {
+  buildContext(keywords, resumeText = '') {
     const sections = [];
+
+    if (resumeText) {
+      sections.push(`FULL RESUME:\n${resumeText.substring(0, 3000)}`);
+    }
     
     if (keywords.skills && keywords.skills.length > 0) {
       sections.push(`SKILLS:\n${keywords.skills.join(', ')}`);
@@ -88,12 +92,14 @@ class AIService {
       hard: 'Focus on advanced concepts, system design, scalability, and architectural decisions.'
     };
 
-    return `You are an expert technical interviewer. Based on the candidate's resume data below, generate ${numQuestions} ${difficulty}-level interview questions.
+    return `You are an expert technical interviewer. Based on the candidate's actual resume below, generate ${numQuestions} ${difficulty}-level interview questions that are SPECIFIC to their projects, skills, and experience — not generic questions.
 
 Resume data:
 ${context}
 
 ${difficultyInstructions[difficulty]}
+
+IMPORTANT: Questions must reference specific technologies, projects, or experiences from the resume above. Do not ask generic questions.
 
 Return ONLY a JSON array of strings, each string being a question. Do not include any other text.
 Example: ["Question 1", "Question 2", ...]`;

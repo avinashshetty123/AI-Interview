@@ -4,9 +4,22 @@ import { FiUser, FiMail, FiPhone, FiMapPin, FiLinkedin, FiGithub, FiGlobe, FiCam
 const PersonalInfo = ({ data = {}, onChange, onNext }) => {
   const [errors, setErrors] = useState({})
 
+  const urlPatterns = {
+    linkedin: { re: /^https?:\/\/(www\.)?linkedin\.com\/in\/[\w-]+\/?$/, hint: 'https://linkedin.com/in/username' },
+    github:   { re: /^https?:\/\/(www\.)?github\.com\/[\w-]+\/?$/,   hint: 'https://github.com/username' },
+    website:  { re: /^https?:\/\/.+\..+/,                              hint: 'https://example.com' },
+  }
+
   const handleChange = (field, value) => {
     onChange('personalInfo', field, value)
-    if (errors[field]) {
+    // Real-time URL validation
+    if (urlPatterns[field]) {
+      if (value && !urlPatterns[field].re.test(value)) {
+        setErrors(prev => ({ ...prev, [field]: `Enter a valid URL — e.g. ${urlPatterns[field].hint}` }))
+      } else {
+        setErrors(prev => ({ ...prev, [field]: '' }))
+      }
+    } else if (errors[field]) {
       setErrors(prev => ({ ...prev, [field]: '' }))
     }
   }
@@ -22,7 +35,7 @@ const PersonalInfo = ({ data = {}, onChange, onNext }) => {
     }
   }
 
-  const validate = () => {
+const validate = () => {
     const newErrors = {}
     const requiredFields = ['fullName', 'email', 'phone', 'location']
     
@@ -35,6 +48,12 @@ const PersonalInfo = ({ data = {}, onChange, onNext }) => {
     if (data.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.email)) {
       newErrors.email = 'Please enter a valid email address'
     }
+
+    Object.entries(urlPatterns).forEach(([field, { re, hint }]) => {
+      if (data[field] && !re.test(data[field])) {
+        newErrors[field] = `Enter a valid URL — e.g. ${hint}`
+      }
+    })
 
     setErrors(newErrors)
     return Object.keys(newErrors).length === 0
@@ -142,10 +161,13 @@ const PersonalInfo = ({ data = {}, onChange, onNext }) => {
               type="url"
               value={data.linkedin || ''}
               onChange={(e) => handleChange('linkedin', e.target.value)}
-              className="w-full pl-12 pr-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-violet-500 transition-colors"
+              className={`w-full pl-12 pr-4 py-3 border-2 rounded-xl focus:outline-none transition-colors ${
+                errors.linkedin ? 'border-red-300 focus:border-red-500' : 'border-gray-200 focus:border-violet-500'
+              }`}
               placeholder="https://linkedin.com/in/johndoe"
             />
           </div>
+          {errors.linkedin && <p className="text-sm text-red-600 mt-1">{errors.linkedin}</p>}
         </div>
 
         <div>
@@ -156,10 +178,13 @@ const PersonalInfo = ({ data = {}, onChange, onNext }) => {
               type="url"
               value={data.github || ''}
               onChange={(e) => handleChange('github', e.target.value)}
-              className="w-full pl-12 pr-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-violet-500 transition-colors"
+              className={`w-full pl-12 pr-4 py-3 border-2 rounded-xl focus:outline-none transition-colors ${
+                errors.github ? 'border-red-300 focus:border-red-500' : 'border-gray-200 focus:border-violet-500'
+              }`}
               placeholder="https://github.com/johndoe"
             />
           </div>
+          {errors.github && <p className="text-sm text-red-600 mt-1">{errors.github}</p>}
         </div>
 
         <div className="md:col-span-2">
@@ -170,10 +195,13 @@ const PersonalInfo = ({ data = {}, onChange, onNext }) => {
               type="url"
               value={data.website || ''}
               onChange={(e) => handleChange('website', e.target.value)}
-              className="w-full pl-12 pr-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-violet-500 transition-colors"
+              className={`w-full pl-12 pr-4 py-3 border-2 rounded-xl focus:outline-none transition-colors ${
+                errors.website ? 'border-red-300 focus:border-red-500' : 'border-gray-200 focus:border-violet-500'
+              }`}
               placeholder="https://johndoe.com"
             />
           </div>
+          {errors.website && <p className="text-sm text-red-600 mt-1">{errors.website}</p>}
         </div>
       </div>
 

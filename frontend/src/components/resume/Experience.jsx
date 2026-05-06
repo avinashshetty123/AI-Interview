@@ -1,9 +1,10 @@
 import { useState } from 'react'
-import { FiBriefcase, FiPlus, FiTrash2, FiCalendar, FiMapPin } from 'react-icons/fi'
+import { FiBriefcase, FiPlus, FiTrash2, FiCalendar, FiMapPin, FiZap, FiRefreshCw } from 'react-icons/fi'
 import { Button } from '../ui/button'
 
-const Experience = ({ data = [], onChange, onNext, onPrev }) => {
+const Experience = ({ data = [], onChange, onNext, onPrev, onOptimizeText }) => {
   const [errors, setErrors] = useState({})
+  const [optimizing, setOptimizing] = useState({})
 
   const addExperience = () => {
     const newExp = {
@@ -53,6 +54,50 @@ const Experience = ({ data = [], onChange, onNext, onPrev }) => {
     onChange('experience', null, updated)
   }
 
+  const optimizeDescription = async (index) => {
+    if (!onOptimizeText || !data[index]?.description) return
+    
+    setOptimizing(prev => ({ ...prev, [`${index}_description`]: true }))
+    
+    try {
+      const optimizedText = await onOptimizeText(
+        data[index].description, 
+        'experience',
+        { jobTitle: data[index].jobTitle, company: data[index].company }
+      )
+      
+      if (optimizedText && optimizedText !== data[index].description) {
+        updateExperience(index, 'description', optimizedText)
+      }
+    } catch (error) {
+      console.error('Failed to optimize description:', error)
+    } finally {
+      setOptimizing(prev => ({ ...prev, [`${index}_description`]: false }))
+    }
+  }
+
+  const optimizeAchievement = async (expIndex, achIndex) => {
+    if (!onOptimizeText || !data[expIndex]?.achievements?.[achIndex]) return
+    
+    const key = `${expIndex}_${achIndex}_achievement`
+    setOptimizing(prev => ({ ...prev, [key]: true }))
+    
+    try {
+      const optimizedText = await onOptimizeText(
+        data[expIndex].achievements[achIndex], 
+        'achievement'
+      )
+      
+      if (optimizedText && optimizedText !== data[expIndex].achievements[achIndex]) {
+        updateAchievement(expIndex, achIndex, optimizedText)
+      }
+    } catch (error) {
+      console.error('Failed to optimize achievement:', error)
+    } finally {
+      setOptimizing(prev => ({ ...prev, [key]: false }))
+    }
+  }
+
   const validate = () => {
     const newErrors = {}
     data.forEach((exp, index) => {
@@ -66,13 +111,11 @@ const Experience = ({ data = [], onChange, onNext, onPrev }) => {
   }
 
   const handleNext = () => {
-    if (data.length === 0) {
-      alert('Please add at least one work experience')
-      return
+    // Experience is optional, so we can proceed even with no entries
+    if (data.length > 0 && !validate()) {
+      return // Only validate if there are entries
     }
-    if (validate()) {
-      onNext()
-    }
+    onNext()
   }
 
   return (
@@ -86,10 +129,18 @@ const Experience = ({ data = [], onChange, onNext, onPrev }) => {
       </div>
 
       {data.length === 0 ? (
-        <div className="text-center py-12 bg-gray-50 rounded-xl">
-          <FiBriefcase size={48} className="mx-auto text-gray-400 mb-4" />
-          <p className="text-gray-600 mb-4">No work experience added yet</p>
-          <Button onClick={addExperience}>Add Your First Experience</Button>
+        <div className="text-center py-12 bg-blue-50 rounded-xl border border-blue-200">
+          <FiBriefcase size={48} className="mx-auto text-blue-400 mb-4" />
+          <h3 className="text-lg font-medium text-blue-700 mb-2">No Work Experience (Optional)</h3>
+          <p className="text-blue-600 mb-4">You can add work experience to strengthen your resume, or skip this section</p>
+          <div className="flex gap-3 justify-center">
+            <Button onClick={addExperience} className="bg-blue-600 hover:bg-blue-700">
+              Add Experience
+            </Button>
+            <Button onClick={onNext} variant="outline" className="border-blue-300 text-blue-700">
+              Skip This Section
+            </Button>
+          </div>
         </div>
       ) : (
         <div className="space-y-6">
@@ -205,7 +256,25 @@ const Experience = ({ data = [], onChange, onNext, onPrev }) => {
               </div>
 
               <div className="mb-4">
-                <label className="block text-sm font-semibold text-gray-700 mb-2">Job Description</label>
+                <div className="flex justify-between items-center mb-2">
+                  <label className="block text-sm font-semibold text-gray-700">Job Description</label>
+                  {onOptimizeText && (
+                    <Button
+                      onClick={() => optimizeDescription(index)}
+                      disabled={optimizing[`${index}_description`] || !exp.description?.trim()}
+                      variant="outline"
+                      size="sm"
+                      className="flex items-center gap-1 text-blue-600 hover:bg-blue-50"
+                    >
+                      {optimizing[`${index}_description`] ? (
+                        <FiRefreshCw size={14} className="animate-spin" />
+                      ) : (
+                        <FiZap size={14} />
+                      )}
+                      {optimizing[`${index}_description`] ? 'Optimizing...' : 'AI Optimize'}
+                    </Button>
+                  )}
+                </div>
                 <textarea
                   value={exp.description}
                   onChange={(e) => updateExperience(index, 'description', e.target.value)}
@@ -238,6 +307,21 @@ const Experience = ({ data = [], onChange, onNext, onPrev }) => {
                         className="flex-1 px-4 py-2 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-violet-500 transition-colors"
                         placeholder="• Increased team productivity by 30%..."
                       />
+                      {onOptimizeText && achievement?.trim() && (
+                        <Button
+                          onClick={() => optimizeAchievement(index, achIndex)}
+                          disabled={optimizing[`${index}_${achIndex}_achievement`]}
+                          variant="outline"
+                          size="sm"
+                          className="text-blue-600 hover:bg-blue-50"
+                        >
+                          {optimizing[`${index}_${achIndex}_achievement`] ? (
+                            <FiRefreshCw size={14} className="animate-spin" />
+                          ) : (
+                            <FiZap size={14} />
+                          )}
+                        </Button>
+                      )}
                       {exp.achievements.length > 1 && (
                         <Button
                           onClick={() => removeAchievement(index, achIndex)}

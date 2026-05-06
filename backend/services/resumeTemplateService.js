@@ -1,752 +1,426 @@
+const LOGO_URL = process.env.RESUME_LOGO_URL || 'http://localhost:8080/logo.png';
+
 class ResumeTemplateService {
   constructor() {
     this.templates = {
-      modern: new ModernTemplate(),
-      classic: new ClassicTemplate(),
-      minimal: new MinimalTemplate(),
-      creative: new CreativeTemplate(),
-      executive: new ExecutiveTemplate(),
-      tech: new TechTemplate()
-    }
-  }
-
-  getTemplate(templateId) {
-    return this.templates[templateId] || this.templates.modern
+      modern: {
+        id: 'modern',
+        name: 'Modern ATS',
+        description: 'Polished single-column resume with crisp blue accents',
+        atsScore: 98,
+        category: 'Professional',
+        bestFor: 'Tech, business, and general corporate roles',
+        accent: '#2563eb',
+        rule: '#bfdbfe',
+        muted: '#475569',
+        logoHeight: 26
+      },
+      classic: {
+        id: 'classic',
+        name: 'Classic ATS',
+        description: 'Traditional black-and-white format for formal industries',
+        atsScore: 100,
+        category: 'Traditional',
+        bestFor: 'Finance, law, consulting, and enterprise roles',
+        accent: '#111827',
+        rule: '#d1d5db',
+        muted: '#374151',
+        logoHeight: 24
+      },
+      minimal: {
+        id: 'minimal',
+        name: 'Minimal ATS',
+        description: 'Maximum readability with minimal visual styling',
+        atsScore: 100,
+        category: 'Minimal',
+        bestFor: 'Any industry and maximum ATS compatibility',
+        accent: '#000000',
+        rule: '#e5e7eb',
+        muted: '#4b5563',
+        logoHeight: 22
+      },
+      creative: {
+        id: 'creative',
+        name: 'Creative ATS',
+        description: 'ATS-safe structure with a subtle creative accent',
+        atsScore: 96,
+        category: 'Creative',
+        bestFor: 'Design, marketing, and creative operations roles',
+        accent: '#7c3aed',
+        rule: '#ddd6fe',
+        muted: '#4b5563',
+        logoHeight: 26
+      },
+      executive: {
+        id: 'executive',
+        name: 'Executive ATS',
+        description: 'Polished leadership resume with navy accents',
+        atsScore: 98,
+        category: 'Executive',
+        bestFor: 'Senior management, director, VP, and C-level roles',
+        accent: '#1e3a8a',
+        rule: '#c7d2fe',
+        muted: '#334155',
+        logoHeight: 26
+      },
+      tech: {
+        id: 'tech',
+        name: 'Tech ATS',
+        description: 'Readable technical resume with skills and projects emphasis',
+        atsScore: 98,
+        category: 'Technical',
+        bestFor: 'Software engineering, IT, data, and cloud roles',
+        accent: '#047857',
+        rule: '#a7f3d0',
+        muted: '#3f4f46',
+        logoHeight: 26
+      }
+    };
   }
 
   getAllTemplates() {
-    return [
-      {
-        id: 'modern',
-        name: 'Modern Blue',
-        description: 'Clean professional design with blue accents',
-        atsScore: 98,
-        category: 'Professional',
-        bestFor: 'Tech, business, general corporate roles'
-      },
-      {
-        id: 'classic',
-        name: 'Classic Black',
-        description: 'Traditional format with black accents',
-        atsScore: 100,
-        category: 'Traditional',
-        bestFor: 'Law, finance, consulting, formal industries'
-      },
-      {
-        id: 'minimal',
-        name: 'Minimal Clean',
-        description: 'Ultra-clean design with maximum readability',
-        atsScore: 100,
-        category: 'Minimal',
-        bestFor: 'Any industry, academic, research roles'
-      },
-      {
-        id: 'creative',
-        name: 'Creative Purple',
-        description: 'Professional design with creative purple touches',
-        atsScore: 95,
-        category: 'Creative',
-        bestFor: 'Design, marketing, creative industries'
-      },
-      {
-        id: 'executive',
-        name: 'Executive Navy',
-        description: 'Premium design with navy blue for leadership roles',
-        atsScore: 97,
-        category: 'Executive',
-        bestFor: 'Senior management, C-level, executive positions'
-      },
-      {
-        id: 'tech',
-        name: 'Tech Green',
-        description: 'Clean design with green accents for tech professionals',
-        atsScore: 98,
-        category: 'Technical',
-        bestFor: 'Software engineering, IT, data science'
-      }
-    ]
+    return Object.values(this.templates).map(({ accent, ...template }) => template);
+  }
+
+  getTemplate(templateId) {
+    return this.templates[templateId] || this.templates.modern;
   }
 
   generateHTML(resumeData, templateId = 'modern') {
-    const template = this.getTemplate(templateId)
-    return template.render(resumeData)
-  }
-}
+    const template = this.getTemplate(templateId);
+    const data = this.normalizeResumeData(resumeData);
 
-class BaseTemplate {
-  constructor() {
-    this.colors = {
-      primary: '#7C3AED',
-      secondary: '#EC4899',
-      accent: '#06B6D4',
-      text: '#1F2937',
-      textLight: '#6B7280',
-      background: '#FFFFFF'
-    }
+    const html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>${this.escape(data.personalInfo.fullName || 'Resume')} - Resume</title>
+  <style>${this.getStyles(template)}</style>
+</head>
+<body>
+  <main class="resume">
+    ${this.renderBrand()}
+    ${this.renderHeader(data.personalInfo)}
+    ${this.renderSummary(data.summary)}
+    ${this.renderSkills(data.skills)}
+    ${this.renderExperience(data.experience)}
+    ${this.renderProjects(data.projects)}
+    ${this.renderEducation(data.education)}
+    ${this.renderCertifications(data.certifications)}
+    ${this.renderFooter()}
+  </main>
+</body>
+</html>`;
+
+    return this.stripDuplicateBranding(html);
   }
 
-  render(data) {
+  getStyles(template) {
     return `
-      <!DOCTYPE html>
-      <html lang="en">
-      <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>${data.personalInfo.fullName} - Resume</title>
-        <style>${this.getStyles()}</style>
-      </head>
-      <body>
-        <div class="resume-container">
-          ${this.renderHeader(data.personalInfo)}
-          ${this.renderSummary(data.summary)}
-          ${this.renderExperience(data.experience)}
-          ${this.renderEducation(data.education)}
-          ${this.renderSkills(data.skills)}
-          ${this.renderProjects(data.projects)}
-          ${this.renderCertifications(data.certifications)}
-        </div>
-      </body>
-      </html>
-    `
-  }
-
-  getStyles() {
-    return `
-      @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
-      
-      * { margin: 0; padding: 0; box-sizing: border-box; }
-      
-      body { 
-        font-family: 'Inter', Arial, sans-serif;
-        line-height: 1.4;
-        color: ${this.colors.text};
-        background: white;
-        font-size: 11px;
+      @page { size: A4; margin: 0.5in; }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        background: #ffffff;
+        color: #111827;
+        font-family: Arial, Helvetica, sans-serif;
+        font-size: 10.25pt;
+        line-height: 1.42;
       }
-      
-      .resume-container { 
-        max-width: 8.5in; 
-        margin: 0 auto; 
-        background: white;
+      .resume {
+        max-width: 7.5in;
+        min-height: 10in;
+        margin: 0 auto;
+        padding: 0.46in 0.5in 0.42in;
+        background: #ffffff;
         position: relative;
-        padding: 0.5in;
       }
-      
-      /* Header */
-      .header {
-        margin-bottom: 1.5rem;
-        padding-bottom: 1rem;
-        border-bottom: 1px solid #e5e7eb;
-      }
-      
-      .header-content {
+      .brand {
         display: flex;
-        align-items: flex-start;
-        gap: 1rem;
-      }
-      
-      .header-main {
-        flex: 1;
-      }
-      
-      .profile-photo {
-        flex-shrink: 0;
-      }
-      
-      .profile-img {
-        width: 80px;
-        height: 80px;
-        border-radius: 4px;
-        object-fit: cover;
-        border: 1px solid #e5e7eb;
-      }
-      
-      .name {
-        font-size: 24px;
-        font-weight: 700;
-        color: ${this.colors.text};
-        margin-bottom: 0.25rem;
-        line-height: 1.2;
-      }
-      
-      .contact-info {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 0.75rem;
-        font-size: 10px;
-        color: ${this.colors.textLight};
-      }
-      
-      .contact-item {
-        display: flex;
+        justify-content: flex-end;
         align-items: center;
-        gap: 0.25rem;
+        min-height: ${template.logoHeight}px;
+        margin-bottom: 9px;
       }
-      
-      .contact-item a {
-        color: inherit;
-        text-decoration: none;
+      .brand img {
+        height: ${template.logoHeight}px;
+        width: auto;
+        object-fit: contain;
       }
-      
-      /* Sections */
-      .section { 
-        margin-bottom: 1.25rem;
+      .header {
+        text-align: center;
+        border-bottom: 1.5px solid ${template.accent};
+        padding-bottom: 11px;
+        margin-bottom: 15px;
       }
-      
-      .section-title { 
-        font-size: 12px; 
-        font-weight: 600; 
-        color: ${this.colors.primary};
+      h1 {
+        margin: 0 0 6px;
+        color: #111827;
+        font-size: 21pt;
+        line-height: 1.15;
+        font-weight: 700;
+        letter-spacing: 0;
+      }
+      .contact {
+        display: block;
+        color: ${template.muted};
+        font-size: 9.5pt;
+        line-height: 1.35;
+        overflow-wrap: anywhere;
+      }
+      section {
+        margin: 0 0 14px;
+        page-break-inside: avoid;
+      }
+      h2 {
+        margin: 0 0 7px;
+        padding-bottom: 3px;
+        border-bottom: 1px solid ${template.rule};
+        color: ${template.accent};
+        font-size: 11.25pt;
+        line-height: 1.2;
         text-transform: uppercase;
-        letter-spacing: 0.5px;
-        margin-bottom: 0.75rem;
-        padding-bottom: 0.25rem;
-        border-bottom: 1px solid ${this.colors.primary};
+        font-weight: 700;
+        letter-spacing: 0;
       }
-      
-      /* Items */
-      .item { 
-        margin-bottom: 1rem;
+      .entry {
+        margin-bottom: 11px;
+        page-break-inside: avoid;
       }
-      
-      .item:last-child {
-        margin-bottom: 0;
+      .entry-head {
+        display: block;
+        margin-bottom: 3px;
       }
-      
-      .item-header { 
-        display: flex; 
-        justify-content: space-between; 
-        align-items: flex-start;
-        margin-bottom: 0.25rem;
-        gap: 1rem;
+      .entry-title {
+        font-weight: 700;
+        color: #111827;
+        font-size: 10.75pt;
       }
-      
-      .item-left {
-        flex: 1;
-        min-width: 0;
+      .entry-meta {
+        color: ${template.muted};
+        font-size: 9.5pt;
+        margin-top: 1px;
       }
-      
-      .item-right {
-        flex-shrink: 0;
-        text-align: right;
+      p {
+        margin: 0 0 5px;
       }
-      
-      .item-title { 
-        font-weight: 600; 
-        font-size: 11px;
-        color: ${this.colors.text};
-        line-height: 1.3;
+      ul {
+        margin: 4px 0 0 17px;
+        padding: 0;
       }
-      
-      .item-subtitle { 
-        color: ${this.colors.primary}; 
-        font-weight: 500;
-        font-size: 10px;
-        margin-top: 0.1rem;
+      li {
+        margin: 0 0 3px;
+        padding-left: 2px;
       }
-      
-      .item-date { 
-        color: ${this.colors.textLight}; 
-        font-size: 9px;
-        font-weight: 500;
-        white-space: nowrap;
+      .skills-line {
+        margin-bottom: 4px;
       }
-      
-      .item-location {
-        color: ${this.colors.textLight};
-        font-size: 9px;
-        margin-top: 0.1rem;
+      strong {
+        color: #111827;
       }
-      
-      .item-description { 
-        margin-top: 0.5rem;
-        font-size: 10px;
-        line-height: 1.4;
-        color: ${this.colors.text};
+      .footer {
+        display: flex;
+        justify-content: center;
+        margin-top: 18px;
+        padding-top: 8px;
+        border-top: 1px solid ${template.rule};
       }
-      
-      /* Skills */
-      .skills-container {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 1rem;
+      .footer img {
+        height: 18px;
+        width: auto;
+        object-fit: contain;
       }
-      
-      .skill-category h4 { 
-        font-weight: 600; 
-        margin-bottom: 0.5rem;
-        color: ${this.colors.text};
-        font-size: 10px;
-      }
-      
-      .skill-tags { 
-        display: flex; 
-        flex-wrap: wrap; 
-        gap: 0.25rem; 
-      }
-      
-      .skill-tag { 
-        background: #f3f4f6;
-        color: ${this.colors.text};
-        padding: 0.15rem 0.4rem;
-        border-radius: 3px;
-        font-size: 9px;
-        font-weight: 500;
-        border: 1px solid #e5e7eb;
-      }
-      
-      /* Lists */
-      ul { 
-        padding-left: 1rem;
-        margin-top: 0.25rem;
-      }
-      
-      li { 
-        margin-bottom: 0.15rem;
-        font-size: 10px;
-        line-height: 1.3;
-      }
-      
-      /* Summary */
-      .summary-text {
-        font-size: 10px;
-        line-height: 1.4;
-        color: ${this.colors.text};
-        text-align: justify;
-      }
-      
-      /* Branding */
-      .jankoti-branding {
-        position: absolute;
-        top: 0.25in;
-        right: 0.5in;
-        font-size: 8px;
-        color: #9ca3af;
-        text-align: right;
-      }
-      
-      .logo-text {
-        font-weight: 600;
-        color: ${this.colors.primary};
-      }
-      
-      .branding-text {
-        font-size: 7px;
-        margin-top: 0.1rem;
-      }
-      
-      /* Print optimization */
       @media print {
-        body { background: white; }
-        .resume-container { 
-          box-shadow: none;
+        body { margin: 0; }
+        .resume {
           max-width: none;
+          min-height: auto;
           margin: 0;
-          padding: 0.5in;
-        }
-        .section { page-break-inside: avoid; }
-        .item { page-break-inside: avoid; }
-      }
-      
-      /* Responsive - only for screen */
-      @media screen and (max-width: 768px) {
-        .resume-container {
-          padding: 1rem;
-        }
-        
-        .header-content {
-          flex-direction: column;
-          text-align: center;
-        }
-        
-        .contact-info {
-          justify-content: center;
-        }
-        
-        .skills-container {
-          grid-template-columns: 1fr;
-        }
-        
-        .item-header {
-          flex-direction: column;
-          align-items: flex-start;
-        }
-        
-        .item-right {
-          text-align: left;
+          padding: 0;
         }
       }
-    `
+    `;
+  }
+
+  renderBrand() {
+    return `<div class="brand"><img src="${LOGO_URL}" alt="Jankoti"></div>`;
   }
 
   renderHeader(personalInfo) {
-    return `
-      <header class="header">
-        <div class="header-content">
-          <div class="header-main">
-            ${personalInfo.profilePicture ? `
-              <div class="profile-photo">
-                <img src="${personalInfo.profilePicture}" alt="${personalInfo.fullName}" class="profile-img" />
-              </div>
-            ` : ''}
-            <div class="header-text">
-              <h1 class="name">${personalInfo.fullName || 'Your Name'}</h1>
-              <div class="contact-info">
-                ${personalInfo.email ? `<span class="contact-item">Email: ${personalInfo.email}</span>` : ''}
-                ${personalInfo.phone ? `<span class="contact-item">Phone: ${personalInfo.phone}</span>` : ''}
-                ${personalInfo.location ? `<span class="contact-item">Location: ${personalInfo.location}</span>` : ''}
-                ${personalInfo.linkedin ? `<span class="contact-item">LinkedIn: <a href="${personalInfo.linkedin}" target="_blank">${personalInfo.linkedin}</a></span>` : ''}
-                ${personalInfo.github ? `<span class="contact-item">GitHub: <a href="${personalInfo.github}" target="_blank">${personalInfo.github}</a></span>` : ''}
-                ${personalInfo.website ? `<span class="contact-item">Portfolio: <a href="${personalInfo.website}" target="_blank">${personalInfo.website}</a></span>` : ''}
-              </div>
-            </div>
-          </div>
-          <div class="jankoti-branding">
-            <div class="jankoti-logo">
-              <span class="logo-text">JANKOTI</span>
-            </div>
-            <div class="branding-text">AI-Powered Resume</div>
-          </div>
-        </div>
-      </header>
-    `
+    const contacts = [
+      personalInfo.email,
+      personalInfo.phone,
+      personalInfo.location,
+      personalInfo.linkedin,
+      personalInfo.github,
+      personalInfo.website
+    ].filter(Boolean);
+
+    return `<header class="header">
+      <h1>${this.escape(personalInfo.fullName || 'Your Name')}</h1>
+      ${contacts.length ? `<span class="contact">${contacts.map(item => this.escape(item)).join(' | ')}</span>` : ''}
+    </header>`;
   }
 
   renderSummary(summary) {
-    if (!summary) return ''
-    return `
-      <section class="section">
-        <h2 class="section-title">Professional Summary</h2>
-        <p class="summary-text">${summary}</p>
-      </section>
-    `
-  }
-
-  renderExperience(experience) {
-    if (!experience?.length) return ''
-    return `
-      <section class="section">
-        <h2 class="section-title">Professional Experience</h2>
-        ${experience.map(exp => `
-          <div class="item">
-            <div class="item-header">
-              <div class="item-left">
-                <div class="item-title">${exp.jobTitle || 'Job Title'}</div>
-                <div class="item-subtitle">${exp.company || 'Company'}</div>
-                ${exp.location ? `<div class="item-location">${exp.location}</div>` : ''}
-              </div>
-              <div class="item-right">
-                <div class="item-date">${exp.startDate || ''} - ${exp.isCurrentJob ? 'Present' : exp.endDate || ''}</div>
-              </div>
-            </div>
-            ${exp.description ? `<div class="item-description">${exp.description}</div>` : ''}
-            ${exp.achievements?.filter(a => a.trim()).length ? `
-              <ul>
-                ${exp.achievements.filter(a => a.trim()).map(achievement => `<li>${achievement}</li>`).join('')}
-              </ul>
-            ` : ''}
-          </div>
-        `).join('')}
-      </section>
-    `
-  }
-
-  renderEducation(education) {
-    if (!education?.length) return ''
-    return `
-      <section class="section">
-        <h2 class="section-title">Education</h2>
-        ${education.map(edu => `
-          <div class="item">
-            <div class="item-header">
-              <div class="item-left">
-                <div class="item-title">${edu.degree || 'Degree'}</div>
-                <div class="item-subtitle">${edu.institution || 'Institution'}</div>
-                ${edu.location ? `<div class="item-location">${edu.location}</div>` : ''}
-                ${edu.gpa ? `<div class="item-location">GPA: ${edu.gpa}</div>` : ''}
-              </div>
-              <div class="item-right">
-                <div class="item-date">${edu.startDate || ''} - ${edu.endDate || ''}</div>
-              </div>
-            </div>
-          </div>
-        `).join('')}
-      </section>
-    `
+    if (!summary) return '';
+    return `<section><h2>Professional Summary</h2><p>${this.escape(summary)}</p></section>`;
   }
 
   renderSkills(skills) {
-    if (!skills?.technical?.length && !skills?.soft?.length) return ''
-    return `
-      <section class="section">
-        <h2 class="section-title">Skills</h2>
-        <div class="skills-container">
-          ${skills.technical?.length ? `
-            <div class="skill-category">
-              <h4>Technical Skills</h4>
-              <div class="skill-tags">
-                ${skills.technical.map(skill => `
-                  <span class="skill-tag">${typeof skill === 'object' ? skill.name : skill}</span>
-                `).join('')}
-              </div>
-            </div>
-          ` : ''}
-          ${skills.soft?.length ? `
-            <div class="skill-category">
-              <h4>Soft Skills</h4>
-              <div class="skill-tags">
-                ${skills.soft.map(skill => `
-                  <span class="skill-tag">${skill}</span>
-                `).join('')}
-              </div>
-            </div>
-          ` : ''}
-        </div>
-      </section>
-    `
+    const technical = this.skillNames(skills.technical);
+    const soft = this.skillNames(skills.soft);
+    if (!technical.length && !soft.length) return '';
+
+    return `<section>
+      <h2>Skills</h2>
+      ${technical.length ? `<p class="skills-line"><strong>Technical:</strong> ${this.escape(technical.join(', '))}</p>` : ''}
+      ${soft.length ? `<p class="skills-line"><strong>Professional:</strong> ${this.escape(soft.join(', '))}</p>` : ''}
+    </section>`;
+  }
+
+  renderExperience(experience) {
+    if (!experience.length) return '';
+
+    return `<section>
+      <h2>Professional Experience</h2>
+      ${experience.map(exp => {
+        const title = exp.jobTitle || exp.title || 'Job Title';
+        const company = exp.company || 'Company';
+        const dates = this.dateRange(exp.startDate, exp.endDate, exp.isCurrentJob);
+        const meta = [company, dates, exp.location].filter(Boolean).join(' | ');
+
+        return `<div class="entry">
+          <div class="entry-head">
+            <div class="entry-title">${this.escape(title)}</div>
+            ${meta ? `<div class="entry-meta">${this.escape(meta)}</div>` : ''}
+          </div>
+          ${exp.description ? `<p>${this.escape(exp.description)}</p>` : ''}
+          ${this.renderList(exp.achievements)}
+        </div>`;
+      }).join('')}
+    </section>`;
   }
 
   renderProjects(projects) {
-    if (!projects?.length) return ''
-    return `
-      <section class="section">
-        <h2 class="section-title">Projects</h2>
-        ${projects.map(project => `
-          <div class="item">
-            <div class="item-header">
-              <div class="item-left">
-                <div class="item-title">${project.name || 'Project Name'}</div>
-                ${project.technologies?.length ? `
-                  <div class="skill-tags" style="margin-top: 0.25rem;">
-                    ${project.technologies.map(tech => `<span class="skill-tag">${tech}</span>`).join('')}
-                  </div>
-                ` : ''}
-              </div>
-              <div class="item-right">
-                <div class="item-date">${project.startDate || ''} - ${project.endDate || ''}</div>
-              </div>
-            </div>
-            ${project.description ? `<div class="item-description">${project.description}</div>` : ''}
-            ${project.highlights?.filter(h => h.trim()).length ? `
-              <ul>
-                ${project.highlights.filter(h => h.trim()).map(highlight => `<li>${highlight}</li>`).join('')}
-              </ul>
-            ` : ''}
+    if (!projects.length) return '';
+
+    return `<section>
+      <h2>Projects</h2>
+      ${projects.map(project => {
+        const title = project.name || project.title || 'Project';
+        const dates = this.dateRange(project.startDate, project.endDate, false);
+        return `<div class="entry">
+          <div class="entry-head">
+            <div class="entry-title">${this.escape(title)}</div>
+            ${dates ? `<div class="entry-meta">${this.escape(dates)}</div>` : ''}
           </div>
-        `).join('')}
-      </section>
-    `
+          ${project.technologies?.length ? `<p><strong>Technologies:</strong> ${this.escape(this.skillNames(project.technologies).join(', '))}</p>` : ''}
+          ${project.description ? `<p>${this.escape(project.description)}</p>` : ''}
+          ${this.renderList(project.highlights)}
+        </div>`;
+      }).join('')}
+    </section>`;
+  }
+
+  renderEducation(education) {
+    if (!education.length) return '';
+
+    return `<section>
+      <h2>Education</h2>
+      ${education.map(edu => {
+        const dates = this.dateRange(edu.startDate, edu.endDate, edu.isCurrentlyStudying);
+        const meta = [edu.institution, dates, edu.location].filter(Boolean).join(' | ');
+        return `<div class="entry">
+          <div class="entry-head">
+            <div class="entry-title">${this.escape(edu.degree || 'Degree')}</div>
+            ${meta ? `<div class="entry-meta">${this.escape(meta)}</div>` : ''}
+          </div>
+          ${edu.gpa ? `<p><strong>GPA:</strong> ${this.escape(edu.gpa)}</p>` : ''}
+          ${edu.description ? `<p>${this.escape(edu.description)}</p>` : ''}
+        </div>`;
+      }).join('')}
+    </section>`;
   }
 
   renderCertifications(certifications) {
-    if (!certifications?.length) return ''
-    return `
-      <section class="section">
-        <h2 class="section-title">Certifications</h2>
-        ${certifications.map(cert => `
-          <div class="item">
-            <div class="item-header">
-              <div class="item-left">
-                <div class="item-title">${cert.name || 'Certification'}</div>
-                <div class="item-subtitle">${cert.issuer || 'Issuer'}</div>
-                ${cert.credentialId ? `<div class="item-location">ID: ${cert.credentialId}</div>` : ''}
-              </div>
-              <div class="item-right">
-                <div class="item-date">Issued: ${cert.issueDate || ''}</div>
-                ${cert.neverExpires ? '<div class="item-date">Never Expires</div>' : cert.expiryDate ? `<div class="item-date">Expires: ${cert.expiryDate}</div>` : ''}
-              </div>
-            </div>
-          </div>
-        `).join('')}
-      </section>
-    `
+    if (!certifications.length) return '';
+
+    return `<section>
+      <h2>Certifications</h2>
+      ${certifications.map(cert => {
+        const meta = [
+          cert.issuer,
+          cert.issueDate ? `Issued ${this.formatDate(cert.issueDate)}` : '',
+          cert.neverExpires ? 'Never expires' : cert.expiryDate ? `Expires ${this.formatDate(cert.expiryDate)}` : ''
+        ].filter(Boolean).join(' | ');
+        return `<div class="entry">
+          <div class="entry-title">${this.escape(cert.name || 'Certification')}</div>
+          ${meta ? `<div class="entry-meta">${this.escape(meta)}</div>` : ''}
+          ${cert.credentialId ? `<p><strong>Credential ID:</strong> ${this.escape(cert.credentialId)}</p>` : ''}
+        </div>`;
+      }).join('')}
+    </section>`;
+  }
+
+  renderFooter() {
+    return `<div class="footer"><img src="${LOGO_URL}" alt="Jankoti"></div>`;
+  }
+
+  renderList(items = []) {
+    const cleanItems = items.filter(item => String(item || '').trim());
+    if (!cleanItems.length) return '';
+    return `<ul>${cleanItems.map(item => `<li>${this.escape(item)}</li>`).join('')}</ul>`;
+  }
+
+  normalizeResumeData(resumeData = {}) {
+    return {
+      personalInfo: resumeData.personalInfo || {},
+      summary: resumeData.summary || '',
+      skills: resumeData.skills || {},
+      experience: Array.isArray(resumeData.experience) ? resumeData.experience : [],
+      education: Array.isArray(resumeData.education) ? resumeData.education : [],
+      projects: Array.isArray(resumeData.projects) ? resumeData.projects : [],
+      certifications: Array.isArray(resumeData.certifications) ? resumeData.certifications : []
+    };
+  }
+
+  skillNames(skills = []) {
+    return skills
+      .map(skill => (typeof skill === 'object' ? skill.name : skill))
+      .filter(skill => String(skill || '').trim());
+  }
+
+  dateRange(startDate, endDate, isCurrent) {
+    const start = this.formatDate(startDate);
+    const end = isCurrent ? 'Present' : this.formatDate(endDate);
+    if (start && end) return `${start} - ${end}`;
+    return start || end || '';
+  }
+
+  formatDate(date) {
+    if (!date) return '';
+    const parsed = new Date(date);
+    if (Number.isNaN(parsed.getTime())) return String(date);
+    return parsed.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+  }
+
+  escape(value) {
+    return String(value || '').replace(/[<>&"']/g, match => ({
+      '<': '&lt;',
+      '>': '&gt;',
+      '&': '&amp;',
+      '"': '&quot;',
+      "'": '&#39;'
+    }[match]));
+  }
+
+  stripDuplicateBranding(html) {
+    return String(html || '')
+      .replace(/<span>\s*Jankoti\s*<\/span>/gi, '')
+      .replace(/Generated by\s*Jankoti AI Interview Platform(?:\s*-\s*ATS Optimized Resume)?/gi, '');
   }
 }
 
-class ModernTemplate extends BaseTemplate {
-  constructor() {
-    super()
-    this.colors = {
-      primary: '#2563eb',
-      secondary: '#1e40af',
-      accent: '#3b82f6',
-      text: '#1f2937',
-      textLight: '#6b7280',
-      background: '#ffffff'
-    }
-  }
-
-  getStyles() {
-    return super.getStyles() + `
-      .section-title {
-        color: #2563eb;
-        border-bottom-color: #2563eb;
-      }
-      
-      .item-subtitle {
-        color: #2563eb;
-      }
-      
-      .logo-text {
-        color: #2563eb;
-      }
-    `
-  }
-}
-
-class ClassicTemplate extends BaseTemplate {
-  constructor() {
-    super()
-    this.colors = {
-      primary: '#1f2937',
-      secondary: '#374151',
-      accent: '#6b7280',
-      text: '#1f2937',
-      textLight: '#6b7280',
-      background: '#ffffff'
-    }
-  }
-
-  getStyles() {
-    return super.getStyles() + `
-      .section-title {
-        color: #1f2937;
-        border-bottom-color: #1f2937;
-      }
-      
-      .item-subtitle {
-        color: #1f2937;
-      }
-      
-      .logo-text {
-        color: #1f2937;
-      }
-    `
-  }
-}
-
-class MinimalTemplate extends BaseTemplate {
-  constructor() {
-    super()
-    this.colors = {
-      primary: '#000000',
-      secondary: '#333333',
-      accent: '#666666',
-      text: '#000000',
-      textLight: '#666666',
-      background: '#ffffff'
-    }
-  }
-
-  getStyles() {
-    return super.getStyles() + `
-      .section-title {
-        color: #000000;
-        border-bottom-color: #000000;
-      }
-      
-      .item-subtitle {
-        color: #000000;
-      }
-      
-      .logo-text {
-        color: #000000;
-      }
-    `
-  }
-}
-
-class CreativeTemplate extends BaseTemplate {
-  constructor() {
-    super()
-    this.colors = {
-      primary: '#7c3aed',
-      secondary: '#a855f7',
-      accent: '#c084fc',
-      text: '#1f2937',
-      textLight: '#6b7280',
-      background: '#ffffff'
-    }
-  }
-
-  getStyles() {
-    return super.getStyles() + `
-      .section-title {
-        color: #7c3aed;
-        border-bottom-color: #7c3aed;
-      }
-      
-      .item-subtitle {
-        color: #7c3aed;
-      }
-      
-      .logo-text {
-        color: #7c3aed;
-      }
-    `
-  }
-}
-
-class ExecutiveTemplate extends BaseTemplate {
-  constructor() {
-    super()
-    this.colors = {
-      primary: '#1e40af',
-      secondary: '#1e3a8a',
-      accent: '#3b82f6',
-      text: '#1f2937',
-      textLight: '#6b7280',
-      background: '#ffffff'
-    }
-  }
-
-  getStyles() {
-    return super.getStyles() + `
-      .section-title {
-        color: #1e40af;
-        border-bottom-color: #1e40af;
-      }
-      
-      .item-subtitle {
-        color: #1e40af;
-      }
-      
-      .logo-text {
-        color: #1e40af;
-      }
-    `
-  }
-}
-
-class TechTemplate extends BaseTemplate {
-  constructor() {
-    super()
-    this.colors = {
-      primary: '#10b981',
-      secondary: '#059669',
-      accent: '#34d399',
-      text: '#1f2937',
-      textLight: '#6b7280',
-      background: '#ffffff'
-    }
-  }
-
-  getStyles() {
-    return super.getStyles() + `
-      .section-title {
-        color: #10b981;
-        border-bottom-color: #10b981;
-      }
-      
-      .item-subtitle {
-        color: #10b981;
-      }
-      
-      .logo-text {
-        color: #10b981;
-      }
-    `
-  }
-}
-
-module.exports = ResumeTemplateService
+module.exports = ResumeTemplateService;

@@ -49,7 +49,7 @@ const Education = ({ data, onChange, onNext, onPrev }) => {
 
   const handleNext = () => {
     if (educationData.length === 0) {
-      addEducation()
+      setErrors({ general: 'At least one education entry is required' })
       return
     }
     if (validate()) {
@@ -64,14 +64,20 @@ const Education = ({ data, onChange, onNext, onPrev }) => {
         <p className="text-gray-600">Add your educational background and qualifications</p>
       </div>
 
+      {errors.general && (
+        <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg">
+          <p className="text-red-600 text-sm font-medium">{errors.general}</p>
+        </div>
+      )}
+
       {educationData.length === 0 ? (
-        <div className="text-center py-16 bg-gray-50 rounded-lg border border-gray-200">
-          <FiBook size={32} className="text-gray-400 mx-auto mb-4" />
-          <h3 className="text-lg font-medium text-gray-700 mb-2">No Education Added</h3>
-          <p className="text-gray-500 mb-6">Add your educational background to strengthen your resume</p>
+        <div className="text-center py-16 bg-red-50 rounded-lg border-2 border-red-200">
+          <FiBook size={32} className="text-red-400 mx-auto mb-4" />
+          <h3 className="text-lg font-medium text-red-700 mb-2">Education Required *</h3>
+          <p className="text-red-600 mb-6">At least one education entry is required for your resume</p>
           <button
             onClick={addEducation}
-            className="px-6 py-2 bg-blue-600 text-white font-medium rounded-md hover:bg-blue-700 transition-colors flex items-center gap-2 mx-auto"
+            className="px-6 py-2 bg-red-600 text-white font-medium rounded-md hover:bg-red-700 transition-colors flex items-center gap-2 mx-auto"
           >
             <FiPlus size={16} />
             Add Education

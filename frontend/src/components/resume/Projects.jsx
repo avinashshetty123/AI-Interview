@@ -1,9 +1,10 @@
 import { useState } from 'react'
-import { FiTarget, FiPlus, FiTrash2, FiGithub, FiExternalLink, FiCode } from 'react-icons/fi'
+import { FiTarget, FiPlus, FiTrash2, FiGithub, FiExternalLink, FiCode, FiZap, FiRefreshCw } from 'react-icons/fi'
 import { Button } from '../ui/button'
 
-const Projects = ({ data = [], onChange, onNext, onPrev }) => {
+const Projects = ({ data = [], onChange, onNext, onPrev, onOptimizeText }) => {
   const [errors, setErrors] = useState({})
+  const [optimizing, setOptimizing] = useState({})
 
   const addProject = () => {
     const newProject = {
@@ -63,24 +64,72 @@ const Projects = ({ data = [], onChange, onNext, onPrev }) => {
     onChange('projects', null, updated)
   }
 
+  const optimizeDescription = async (index) => {
+    if (!onOptimizeText || !data[index]?.description) return
+    
+    setOptimizing(prev => ({ ...prev, [`${index}_description`]: true }))
+    
+    try {
+      const optimizedText = await onOptimizeText(
+        data[index].description, 
+        'project',
+        { name: data[index].name, technologies: data[index].technologies }
+      )
+      
+      if (optimizedText && optimizedText !== data[index].description) {
+        updateProject(index, 'description', optimizedText)
+      }
+    } catch (error) {
+      console.error('Failed to optimize description:', error)
+    } finally {
+      setOptimizing(prev => ({ ...prev, [`${index}_description`]: false }))
+    }
+  }
+
+  const validateUrl = (url, type) => {
+    if (!url) return true // Optional fields
+    
+    try {
+      const urlObj = new URL(url)
+      
+      switch (type) {
+        case 'github':
+          return urlObj.hostname === 'github.com' || urlObj.hostname === 'www.github.com'
+        case 'live':
+          return urlObj.protocol === 'http:' || urlObj.protocol === 'https:'
+        default:
+          return true
+      }
+    } catch {
+      return false
+    }
+  }
+
   const validate = () => {
     const newErrors = {}
     data.forEach((project, index) => {
       if (!project.name?.trim()) newErrors[`${index}_name`] = 'Project name is required'
       if (!project.description?.trim()) newErrors[`${index}_description`] = 'Project description is required'
+      
+      // URL validations
+      if (project.githubUrl && !validateUrl(project.githubUrl, 'github')) {
+        newErrors[`${index}_githubUrl`] = 'Please enter a valid GitHub URL (e.g., https://github.com/username/project)'
+      }
+      
+      if (project.liveUrl && !validateUrl(project.liveUrl, 'live')) {
+        newErrors[`${index}_liveUrl`] = 'Please enter a valid URL (e.g., https://example.com)'
+      }
     })
     setErrors(newErrors)
     return Object.keys(newErrors).length === 0
   }
 
   const handleNext = () => {
-    if (data.length === 0) {
-      alert('Please add at least one project')
-      return
+    // Projects are optional, so we can proceed even with no entries
+    if (data.length > 0 && !validate()) {
+      return // Only validate if there are entries
     }
-    if (validate()) {
-      onNext()
-    }
+    onNext()
   }
 
   const commonTechnologies = [
@@ -99,10 +148,18 @@ const Projects = ({ data = [], onChange, onNext, onPrev }) => {
       </div>
 
       {data.length === 0 ? (
-        <div className="text-center py-12 bg-gray-50 rounded-xl">
-          <FiTarget size={48} className="mx-auto text-gray-400 mb-4" />
-          <p className="text-gray-600 mb-4">No projects added yet</p>
-          <Button onClick={addProject}>Add Your First Project</Button>
+        <div className="text-center py-12 bg-green-50 rounded-xl border border-green-200">
+          <FiTarget size={48} className="mx-auto text-green-400 mb-4" />
+          <h3 className="text-lg font-medium text-green-700 mb-2">No Projects (Optional)</h3>
+          <p className="text-green-600 mb-4">You can add projects to showcase your skills, or skip this section</p>
+          <div className="flex gap-3 justify-center">
+            <Button onClick={addProject} className="bg-green-600 hover:bg-green-700">
+              Add Project
+            </Button>
+            <Button onClick={onNext} variant="outline" className="border-green-300 text-green-700">
+              Skip This Section
+            </Button>
+          </div>
         </div>
       ) : (
         <div className="space-y-6">
@@ -163,10 +220,13 @@ const Projects = ({ data = [], onChange, onNext, onPrev }) => {
                       type="url"
                       value={project.githubUrl}
                       onChange={(e) => updateProject(index, 'githubUrl', e.target.value)}
-                      className="w-full pl-12 pr-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-violet-500 transition-colors"
+                      className={`w-full pl-12 pr-4 py-3 border-2 rounded-xl focus:outline-none transition-colors ${
+                        errors[`${index}_githubUrl`] ? 'border-red-300 focus:border-red-500' : 'border-gray-200 focus:border-violet-500'
+                      }`}
                       placeholder="https://github.com/username/project"
                     />
                   </div>
+                  {errors[`${index}_githubUrl`] && <p className="text-sm text-red-600 mt-1">{errors[`${index}_githubUrl`]}</p>}
                 </div>
 
                 <div>
@@ -177,15 +237,36 @@ const Projects = ({ data = [], onChange, onNext, onPrev }) => {
                       type="url"
                       value={project.liveUrl}
                       onChange={(e) => updateProject(index, 'liveUrl', e.target.value)}
-                      className="w-full pl-12 pr-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-violet-500 transition-colors"
+                      className={`w-full pl-12 pr-4 py-3 border-2 rounded-xl focus:outline-none transition-colors ${
+                        errors[`${index}_liveUrl`] ? 'border-red-300 focus:border-red-500' : 'border-gray-200 focus:border-violet-500'
+                      }`}
                       placeholder="https://myproject.com"
                     />
                   </div>
+                  {errors[`${index}_liveUrl`] && <p className="text-sm text-red-600 mt-1">{errors[`${index}_liveUrl`]}</p>}
                 </div>
               </div>
 
               <div className="mb-4">
-                <label className="block text-sm font-semibold text-gray-700 mb-2">Project Description *</label>
+                <div className="flex justify-between items-center mb-2">
+                  <label className="block text-sm font-semibold text-gray-700">Project Description *</label>
+                  {onOptimizeText && (
+                    <Button
+                      onClick={() => optimizeDescription(index)}
+                      disabled={optimizing[`${index}_description`] || !project.description?.trim()}
+                      variant="outline"
+                      size="sm"
+                      className="flex items-center gap-1 text-blue-600 hover:bg-blue-50"
+                    >
+                      {optimizing[`${index}_description`] ? (
+                        <FiRefreshCw size={14} className="animate-spin" />
+                      ) : (
+                        <FiZap size={14} />
+                      )}
+                      {optimizing[`${index}_description`] ? 'Optimizing...' : 'AI Optimize'}
+                    </Button>
+                  )}
+                </div>
                 <textarea
                   value={project.description}
                   onChange={(e) => updateProject(index, 'description', e.target.value)}
