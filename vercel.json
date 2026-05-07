@@ -1,7 +1,7 @@
 {
-  "installCommand": "npm install --prefix frontend && PUPPETEER_SKIP_DOWNLOAD=true npm install --prefix backend",
-  "buildCommand": "npm run build",
-  "outputDirectory": "frontend/dist",
+  "installCommand": "if [ -f frontend/package.json ]; then npm install --prefix frontend && PUPPETEER_SKIP_DOWNLOAD=true npm install --prefix backend; else npm install && PUPPETEER_SKIP_DOWNLOAD=true npm install --prefix ../backend; fi",
+  "buildCommand": "if [ -f frontend/package.json ]; then npm run build --prefix frontend; else npm run build; fi",
+  "outputDirectory": "dist",
   "functions": {
     "api/index.js": {
       "maxDuration": 60
