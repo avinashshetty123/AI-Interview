@@ -1,4 +1,8 @@
 {
+  "scripts": {
+    "build": "npm run build --prefix frontend",
+    "start": "npm start --prefix backend"
+  },
   "dependencies": {
     "axios": "^1.15.0"
   }

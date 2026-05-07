@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const LOGO_URL = 'http://localhost:8080/logo.png';
+const LOGO_URL = process.env.RESUME_LOGO_URL || '/logo.png';
 const resumeController = require('../controllers/resumeController');
 const resumeParserController = require('../controllers/resumeParserController');
 const aiOptimizationController = require('../controllers/aiOptimizationController');

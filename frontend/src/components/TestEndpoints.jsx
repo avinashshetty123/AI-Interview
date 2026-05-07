@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card'
 import { Button } from './ui/button'
+import { apiUrl } from '../lib/api'
 
 const TestEndpoints = () => {
   const [results, setResults] = useState({})
@@ -34,13 +35,13 @@ const TestEndpoints = () => {
   }
 
   const endpoints = [
-    { name: 'Health Check', url: 'http://localhost:8080/api/health' },
-    { name: 'Test Routes', url: 'http://localhost:8080/api/test-routes' },
-    { name: 'Debug Test', url: 'http://localhost:8080/api/debug/test' },
-    { name: 'Debug Sessions', url: 'http://localhost:8080/api/debug/sessions' },
-    { name: 'Debug Session 1', url: 'http://localhost:8080/api/debug/session/1' },
-    { name: 'Original Sessions', url: 'http://localhost:8080/api/sessions/all' },
-    { name: 'Original Session 1', url: 'http://localhost:8080/api/session/1/qa' },
+    { name: 'Health Check', url: apiUrl('/health') },
+    { name: 'Test Routes', url: apiUrl('/test-routes') },
+    { name: 'Debug Test', url: apiUrl('/debug/test') },
+    { name: 'Debug Sessions', url: apiUrl('/debug/sessions') },
+    { name: 'Debug Session 1', url: apiUrl('/debug/session/1') },
+    { name: 'Original Sessions', url: apiUrl('/sessions/all') },
+    { name: 'Original Session 1', url: apiUrl('/session/1/qa') },
   ]
 
   return (

@@ -3,6 +3,7 @@ import { FiUploadCloud, FiFile, FiAlertCircle, FiLoader, FiCheckCircle } from 'r
 import { Button } from '../ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card'
 import { Alert, AlertDescription } from '../ui/alert'
+import { apiUrl } from '../../lib/api'
 
 const ResumeUploadParser = ({ onResumeDataParsed, onCancel }) => {
   const [file, setFile] = useState(null)
@@ -63,7 +64,7 @@ const ResumeUploadParser = ({ onResumeDataParsed, onCancel }) => {
         })
       }, 200)
 
-      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL || 'http://localhost:8080/api'}/resume/parse-for-builder`, {
+      const response = await fetch(apiUrl('/resume/parse-for-builder'), {
         method: 'POST',
         credentials: 'include',
         body: formData,

@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { FiEdit3, FiZap, FiRefreshCw, FiCheck } from 'react-icons/fi'
+import { apiUrl } from '../../lib/api'
 
 const Summary = ({ data, onChange, onNext, onPrev, resumeData, onOptimizeText }) => {
   const [isGenerating, setIsGenerating] = useState(false)
@@ -24,7 +25,7 @@ const Summary = ({ data, onChange, onNext, onPrev, resumeData, onOptimizeText })
   const generateAISummary = async () => {
     setIsGenerating(true)
     try {
-      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL || 'http://localhost:8080/api'}/resume/generate-summary`, {
+      const response = await fetch(apiUrl('/resume/generate-summary'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',

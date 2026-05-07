@@ -1,4 +1,4 @@
-const LOGO_URL = process.env.RESUME_LOGO_URL || 'http://localhost:8080/logo.png';
+const LOGO_URL = process.env.RESUME_LOGO_URL || '/logo.png';
 
 class ResumeTemplateService {
   constructor() {

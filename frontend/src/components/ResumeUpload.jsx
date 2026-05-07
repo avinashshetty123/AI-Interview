@@ -4,6 +4,7 @@ import { Button } from './ui/button'
 import { Badge } from './ui/badge'
 import { Alert, AlertDescription } from './ui/alert'
 import { FiUploadCloud, FiFile, FiAlertCircle, FiZap, FiTarget, FiBarChart2, FiLoader } from 'react-icons/fi'
+import { apiUrl } from '../lib/api'
 
 const ResumeUpload = ({ onResumeUploaded }) => {
   const [file, setFile] = useState(null)
@@ -54,7 +55,7 @@ const ResumeUpload = ({ onResumeUploaded }) => {
           return prev + Math.random() * 10
         })
       }, 200)
-      const response = await fetch('http://localhost:8080/api/upload-resume', {
+      const response = await fetch(apiUrl('/upload-resume'), {
         method: 'POST',
         credentials: 'include',
         body: formData,

@@ -8,6 +8,7 @@ import {
   FiFileText, FiInfo, FiPrinter, FiRefreshCw, FiChevronLeft,
   FiLoader, FiZap, FiXCircle, FiCheck
 } from 'react-icons/fi'
+import { apiUrl } from '../lib/api'
 
 const Analysis = ({ sessionId, onBack, onReset }) => {
   const [analysis, setAnalysis]     = useState(null)
@@ -19,7 +20,7 @@ const Analysis = ({ sessionId, onBack, onReset }) => {
 
   const fetchSessionData = async () => {
     try {
-      const res = await fetch(`http://localhost:8080/api/session/${sessionId}/qa`, { credentials: 'include' })
+      const res = await fetch(apiUrl(`/session/${sessionId}/qa`), { credentials: 'include' })
       const data = await res.json()
       if (data.success) setSessionData(data)
     } catch (e) { console.error(e) }
@@ -27,12 +28,12 @@ const Analysis = ({ sessionId, onBack, onReset }) => {
 
   const fetchAnalysis = async () => {
     try {
-      const res = await fetch(`http://localhost:8080/api/analysis/${sessionId}`, { credentials: 'include' })
+      const res = await fetch(apiUrl(`/analysis/${sessionId}`), { credentials: 'include' })
       if (res.ok) {
         const data = await res.json()
         if (data.success) { setAnalysis(data.analysis); setLoading(false); return }
       }
-      const statusRes = await fetch(`http://localhost:8080/api/analysis-status/${sessionId}`, { credentials: 'include' })
+      const statusRes = await fetch(apiUrl(`/analysis-status/${sessionId}`), { credentials: 'include' })
       const statusData = await statusRes.json()
       if (!statusData.success || !statusData.canAnalyze) {
         setError('Cannot generate analysis. Complete the interview first.')
@@ -49,7 +50,7 @@ const Analysis = ({ sessionId, onBack, onReset }) => {
   const generateNewAnalysis = async () => {
     setLoading(true); setError('')
     try {
-      const res = await fetch(`http://localhost:8080/api/analyze/${sessionId}`, { method: 'POST', credentials: 'include' })
+      const res = await fetch(apiUrl(`/analyze/${sessionId}`), { method: 'POST', credentials: 'include' })
       const data = await res.json()
       if (data.success) setAnalysis(data.analysis)
       else setError(data.error || 'Failed to generate analysis')

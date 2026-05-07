@@ -5,6 +5,7 @@ import { Button } from './ui/button'
 import { Progress } from './ui/progress'
 import { FiUser, FiEdit3, FiBriefcase, FiBook, FiCode, FiTarget, FiAward, FiEye, FiSave, FiClock, FiUpload, FiZap, FiRefreshCw } from 'react-icons/fi'
 import { useAuth } from '../context/authContext'
+import { apiUrl } from '../lib/api'
 import { saveResumeData, loadResumeData, getDefaultResumeData, mergeWithUserData, useAutoSave } from '../utils/resumeStorage'
 
 // Import modular components
@@ -233,7 +234,7 @@ const ResumeBuilder = ({ onBack }) => {
         return
       }
       
-      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL || 'http://localhost:8080/api'}/resume/optimize-bulk`, {
+      const response = await fetch(apiUrl('/resume/optimize-bulk'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -273,7 +274,7 @@ const ResumeBuilder = ({ onBack }) => {
   
   const generateAISkills = async () => {
     try {
-      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL || 'http://localhost:8080/api'}/resume/generate-skills`, {
+      const response = await fetch(apiUrl('/resume/generate-skills'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -351,7 +352,7 @@ const ResumeBuilder = ({ onBack }) => {
       resumeData: resumeData,
       onOptimizeText: async (text, type, context) => {
         try {
-          const response = await fetch(`${import.meta.env.VITE_BACKEND_URL || 'http://localhost:8080/api'}/resume/optimize-text`, {
+          const response = await fetch(apiUrl('/resume/optimize-text'), {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Card, CardContent } from './ui/card'
 import { Button } from './ui/button'
+import { apiUrl } from '../lib/api'
 
 const Leaderboard = ({ onBack }) => {
   const [leaderboard, setLeaderboard] = useState([])
@@ -28,7 +29,7 @@ const Leaderboard = ({ onBack }) => {
       params.append('page', filter.page)
       params.append('limit', '20')
 
-      const response = await fetch(`http://localhost:8080/api/leaderboard/global?${params}`)
+      const response = await fetch(apiUrl(`/leaderboard/global?${params}`))
       const data = await response.json()
       
       if (data.success) {
@@ -43,7 +44,7 @@ const Leaderboard = ({ onBack }) => {
 
   const fetchStats = async () => {
     try {
-      const response = await fetch('http://localhost:8080/api/leaderboard/stats')
+      const response = await fetch(apiUrl('/leaderboard/stats'))
       const data = await response.json()
       if (data.success) {
         setStats(data.stats)
@@ -55,7 +56,7 @@ const Leaderboard = ({ onBack }) => {
 
   const fetchAvailableTags = async () => {
     try {
-      const response = await fetch('http://localhost:8080/api/question-bank/tags')
+      const response = await fetch(apiUrl('/question-bank/tags'))
       const data = await response.json()
       if (data.success) {
         setAvailableTags(data.tags)

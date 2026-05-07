@@ -1,10 +1,11 @@
 import { createContext, useContext, useEffect, useState } from 'react'
 import axios from 'axios'
+import { API_BASE_URL } from '../lib/api'
 
 const AuthContext = createContext()
 
 export const AuthProvider = ({ children }) => {
-  const API = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8080/api'
+  const API = API_BASE_URL
 
   const [user, setUser] = useState(null)
   const [loading, setLoading] = useState(true)

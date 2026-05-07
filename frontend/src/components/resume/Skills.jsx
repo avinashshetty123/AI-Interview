@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { FiCode, FiPlus, FiX, FiUsers, FiTrendingUp, FiZap, FiRefreshCw } from 'react-icons/fi'
 import { Button } from '../ui/button'
+import { apiUrl } from '../../lib/api'
 
 const Skills = ({ data = { technical: [], soft: [] }, onChange, onNext, onPrev, resumeData }) => {
   const [newTechnicalSkill, setNewTechnicalSkill] = useState('')
@@ -66,7 +67,7 @@ const Skills = ({ data = { technical: [], soft: [] }, onChange, onNext, onPrev, 
   const generateAISkills = async () => {
     setIsGeneratingSkills(true)
     try {
-      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL || 'http://localhost:8080/api'}/resume/generate-skills`, {
+      const response = await fetch(apiUrl('/resume/generate-skills'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

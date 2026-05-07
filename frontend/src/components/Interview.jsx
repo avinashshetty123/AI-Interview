@@ -7,6 +7,7 @@ import {
   FiChevronLeft, FiChevronRight, FiSkipForward, FiUpload,
   FiRefreshCw, FiBarChart2, FiCheck, FiClock, FiAlertCircle, FiLoader
 } from 'react-icons/fi'
+import { apiUrl } from '../lib/api'
 
 const Interview = ({ sessionData, onBack, onComplete }) => {
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0)
@@ -42,7 +43,7 @@ const Interview = ({ sessionData, onBack, onComplete }) => {
   const handleAutoSave = async () => {
     if (!currentAnswer.trim()) return
     try {
-      const res = await fetch('http://localhost:8080/api/submit-answer', {
+      const res = await fetch(apiUrl('/submit-answer'), {
         method: 'POST', credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ sessionId: sessionData.sessionId, questionIndex: currentQuestionIndex, answer: currentAnswer, isAutoSave: true }),
@@ -57,7 +58,7 @@ const Interview = ({ sessionData, onBack, onComplete }) => {
     try {
       const timeOnQuestion = Date.now() - startTime
       const wordCount = currentAnswer.trim().split(/\s+/).length
-      const res = await fetch('http://localhost:8080/api/submit-answer', {
+      const res = await fetch(apiUrl('/submit-answer'), {
         method: 'POST', credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ sessionId: sessionData.sessionId, questionIndex: currentQuestionIndex, answer: currentAnswer, timeSpent: timeOnQuestion, wordCount }),

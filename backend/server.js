@@ -2,6 +2,7 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const cookieParser = require('cookie-parser');
+const path = require('path');
 const connectDB = require('./config/database');
 const routes = require('./routes');
 const errorHandler = require('./middleware/errorHandler');
@@ -16,7 +17,8 @@ connectDB();
 const allowedOrigins = [
   'http://localhost:5173',
   'http://localhost:5174',
-  process.env.FRONTEND_URL
+  process.env.FRONTEND_URL,
+  process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : null
 ].filter(Boolean);
 
 app.use(cors({ 
@@ -47,7 +49,7 @@ app.use((req, res, next) => {
 
 // Serve logo as static asset (used in resume templates)
 app.get('/logo.png', (req, res) => {
-  const logoPath = require('path').join(__dirname, '../frontend/src/assets/Logo.png')
+  const logoPath = path.join(__dirname, '../frontend/src/assets/Logo.png')
   res.sendFile(logoPath)
 })
 
@@ -71,13 +73,15 @@ app.get('/', (req, res) => {
 // Error handling middleware (must be last)
 app.use(errorHandler);
 
-// Start server
-app.listen(PORT, () => {
-  console.log(`Jankoti Node.js Backend running on port ${PORT}`);
-  console.log(`MongoDB: ${process.env.MONGODB_URI || 'mongodb://localhost:27017/jankoti-interview'}`);
-  console.log(`CORS enabled for: ${allowedOrigins.join(', ')}`);
-  console.log(`API Documentation: http://localhost:${PORT}/api/health`);
-});
+// Start server locally. Vercel imports the Express app as a serverless handler.
+if (require.main === module) {
+  app.listen(PORT, () => {
+    console.log(`Jankoti Node.js Backend running on port ${PORT}`);
+    console.log(`MongoDB: ${process.env.MONGODB_URI || 'mongodb://localhost:27017/jankoti-interview'}`);
+    console.log(`CORS enabled for: ${allowedOrigins.join(', ')}`);
+    console.log(`API Documentation: http://localhost:${PORT}/api/health`);
+  });
+}
 
 // Graceful shutdown
 process.on('SIGTERM', () => {

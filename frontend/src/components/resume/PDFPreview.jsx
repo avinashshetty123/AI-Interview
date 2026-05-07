@@ -3,6 +3,7 @@ import { FiEye, FiDownload, FiPrinter, FiShare2, FiCheck, FiRefreshCw, FiZap, Fi
 import { Button } from '../ui/button'
 import { JankotiBranding, JankotiWatermark } from '../ui/JankotiLogo'
 import TemplateSelector from './TemplateSelector'
+import { apiUrl } from '../../lib/api'
 import './preview-styles.css'
 
 const PDFPreview = ({ data, onPrev, onComplete }) => {
@@ -35,7 +36,7 @@ const PDFPreview = ({ data, onPrev, onComplete }) => {
 
   const loadTemplates = async () => {
     try {
-      const response = await fetch('http://localhost:8080/api/resume/templates')
+      const response = await fetch(apiUrl('/resume/templates'))
       const result = await response.json()
       if (result.success) {
         setTemplates(result.templates)
@@ -100,7 +101,7 @@ const PDFPreview = ({ data, onPrev, onComplete }) => {
     setIsLoadingPreview(true)
     setError(null)
     try {
-      const response = await fetch('http://localhost:8080/api/resume/preview', {
+      const response = await fetch(apiUrl('/resume/preview'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -198,7 +199,7 @@ const PDFPreview = ({ data, onPrev, onComplete }) => {
     
     try {
       // Try main PDF generation first
-      let response = await fetch('http://localhost:8080/api/resume/generate-pdf', {
+      let response = await fetch(apiUrl('/resume/generate-pdf'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -212,7 +213,7 @@ const PDFPreview = ({ data, onPrev, onComplete }) => {
       // If main method fails, try fallback
       if (!response.ok) {
         console.log('Main PDF generation failed, trying fallback...')
-        response = await fetch('http://localhost:8080/api/resume/generate-pdf-fallback', {
+        response = await fetch(apiUrl('/resume/generate-pdf-fallback'), {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -285,7 +286,7 @@ const PDFPreview = ({ data, onPrev, onComplete }) => {
       
       if (tryFallback) {
         try {
-          const response = await fetch('http://localhost:8080/api/resume/generate-pdf-fallback', {
+          const response = await fetch(apiUrl('/resume/generate-pdf-fallback'), {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
@@ -326,7 +327,7 @@ const PDFPreview = ({ data, onPrev, onComplete }) => {
     setError(null)
 
     try {
-      const response = await fetch('http://localhost:8080/api/resume/generate-docx', {
+      const response = await fetch(apiUrl('/resume/generate-docx'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

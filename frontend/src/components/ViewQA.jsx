@@ -3,6 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/
 import { Button } from './ui/button'
 import { Badge } from './ui/badge'
 import { Progress } from './ui/progress'
+import { apiUrl } from '../lib/api'
 
 const ViewQA = () => {
   const [sessions, setSessions] = useState([])
@@ -17,7 +18,7 @@ const ViewQA = () => {
 
   const fetchAllSessions = async () => {
     try {
-      const response = await fetch('http://localhost:8080/api/sessions/all')
+      const response = await fetch(apiUrl('/sessions/all'))
       const data = await response.json()
       
       if (data.success) {
@@ -35,7 +36,7 @@ const ViewQA = () => {
   const fetchSessionQA = async (sessionId) => {
     setLoading(true)
     try {
-      const response = await fetch(`http://localhost:8080/api/session/${sessionId}/qa`)
+      const response = await fetch(apiUrl(`/session/${sessionId}/qa`))
       const data = await response.json()
       
       if (data.success) {
