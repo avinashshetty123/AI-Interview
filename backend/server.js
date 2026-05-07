@@ -10,9 +10,6 @@ const errorHandler = require('./middleware/errorHandler');
 const app = express();
 const PORT = process.env.PORT || 8080;
 
-// Connect to MongoDB
-connectDB();
-
 // Middleware
 const allowedOrigins = [
   'http://localhost:5173',
@@ -21,16 +18,28 @@ const allowedOrigins = [
   process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : null
 ].filter(Boolean);
 
-app.use(cors({ 
+const isAllowedOrigin = (origin) => {
+  if (!origin) return true;
+
+  try {
+    const { hostname, protocol } = new URL(origin);
+    const isLocalhost = hostname === 'localhost' || hostname === '127.0.0.1';
+    const isVercelPreview = protocol === 'https:' && hostname.endsWith('.vercel.app');
+
+    return allowedOrigins.includes(origin) || isLocalhost || isVercelPreview;
+  } catch (error) {
+    return false;
+  }
+};
+
+app.use(cors({
   origin: function (origin, callback) {
-    // Allow requests with no origin (like mobile apps or curl requests)
-    if (!origin) return callback(null, true);
-    
-    if (allowedOrigins.indexOf(origin) !== -1) {
-      callback(null, true);
-    } else {
-      callback(new Error('Not allowed by CORS'));
+    if (isAllowedOrigin(origin)) {
+      return callback(null, true);
     }
+
+    console.warn(`Blocked by CORS: ${origin}`);
+    return callback(null, false);
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
@@ -53,8 +62,44 @@ app.get('/logo.png', (req, res) => {
   res.sendFile(logoPath)
 })
 
+const ensureDatabase = async (req, res, next) => {
+  if (req.path === '/health') {
+    return next();
+  }
+
+  try {
+    await connectDB();
+    next();
+  } catch (error) {
+    console.error('Database unavailable:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Database connection failed',
+      message: process.env.NODE_ENV === 'production'
+        ? 'Server is not configured correctly. Check MONGODB_URI in Vercel.'
+        : error.message
+    });
+  }
+};
+
+const ensureAuthConfig = (req, res, next) => {
+  if (!req.path.startsWith('/auth')) {
+    return next();
+  }
+
+  if (!process.env.JWT_SECRET) {
+    return res.status(500).json({
+      success: false,
+      error: 'Authentication is not configured',
+      message: 'JWT_SECRET is missing on the server.'
+    });
+  }
+
+  next();
+};
+
 // Routes
-app.use('/api', routes);
+app.use('/api', ensureDatabase, ensureAuthConfig, routes);
 
 // Root endpoint
 app.get('/', (req, res) => {
