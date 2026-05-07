@@ -92,14 +92,18 @@ class AIService {
       hard: 'Focus on advanced concepts, system design, scalability, and architectural decisions.'
     };
 
-    return `You are an expert technical interviewer. Based on the candidate's actual resume below, generate ${numQuestions} ${difficulty}-level interview questions that are SPECIFIC to their projects, skills, and experience — not generic questions.
+    return `You are an expert technical interviewer. Based ONLY on the candidate's actual resume below, generate ${numQuestions} ${difficulty}-level interview questions that are SPECIFIC to their projects, skills, and experience.
 
 Resume data:
 ${context}
 
 ${difficultyInstructions[difficulty]}
 
-IMPORTANT: Questions must reference specific technologies, projects, or experiences from the resume above. Do not ask generic questions.
+IMPORTANT:
+- Do not use projects, companies, skills, names, or technologies that are not present in the resume above.
+- Do not reuse details from any previous candidate or previous prompt.
+- Questions must reference specific technologies, projects, or experiences from this resume only.
+- If the resume has limited detail, ask questions about only the skills and experience explicitly shown in this resume.
 
 Return ONLY a JSON array of strings, each string being a question. Do not include any other text.
 Example: ["Question 1", "Question 2", ...]`;

@@ -1,7 +1,7 @@
 const { Session, Question, Answer } = require('../models');
 const ResumeParser = require('../utils/resumeParser');
 const AIService = require('../utils/aiService');
-const { addQuestionsToBank, suggestQuestionsForSession, extractTagsFromQuestion, determineCategoryFromTags } = require('./questionBankController');
+const { extractTagsFromQuestion, determineCategoryFromTags } = require('./questionBankController');
 
 const resumeParser = new ResumeParser();
 const aiService = new AIService();
@@ -39,29 +39,12 @@ class InterviewController {
       
       console.log('Extracted skills from resume:', resumeSkills);
 
-      // Try to get questions from bank based on resume skills
-      const bankQuestions = await suggestQuestionsForSession(resumeSkills, difficulty, Math.floor(parseInt(numQuestions) * 0.7));
-      
-      let questions = [];
-      let questionsFromBank = 0;
-      
-      // Use bank questions if available
-      if (bankQuestions.length > 0) {
-        questions = bankQuestions.map(q => ({ question: q.questionText }));
-        questionsFromBank = bankQuestions.length;
-        console.log(`Using ${questionsFromBank} questions from bank for skills:`, resumeSkills.slice(0, 3));
-      }
-      
-      // Generate remaining questions with AI if needed
-      const remainingQuestions = parseInt(numQuestions) - questions.length;
-      if (remainingQuestions > 0) {
-        const aiQuestions = await aiService.generateQuestions(keywords, remainingQuestions, difficulty, resumeText);
-        questions = [...questions, ...aiQuestions];
-        
-        // Add new AI questions to bank for future use
-        await addQuestionsToBank(aiQuestions, difficulty);
-        console.log(`Generated ${aiQuestions.length} new questions with AI`);
-      }
+      // Generate every question from the current resume only.
+      // Do not use or update the global question bank here: resume-specific
+      // questions can contain project/company details from another candidate.
+      const requestedQuestionCount = Math.max(1, parseInt(numQuestions, 10) || 10);
+      const questions = await aiService.generateQuestions(keywords, requestedQuestionCount, difficulty, resumeText);
+      console.log(`Generated ${questions.length} resume-specific questions with AI`);
 
       // Create new session
       const session = new Session({
@@ -80,22 +63,13 @@ class InterviewController {
         const questionText = questions[i].question;
         let tags = [];
         
-        if (i < questionsFromBank) {
-          // Use existing tags from bank question
-          tags = bankQuestions[i].tags || [];
-        } else {
-          // Extract tags for new AI-generated questions
-          tags = extractTagsFromQuestion(questionText);
-          // Also include relevant resume skills
-          const relevantSkills = resumeSkills.filter(skill => 
-            questionText.toLowerCase().includes(skill.toLowerCase())
-          );
-          tags = [...new Set([...tags, ...relevantSkills])];
-        }
+        tags = extractTagsFromQuestion(questionText);
+        const relevantSkills = resumeSkills.filter(skill =>
+          questionText.toLowerCase().includes(skill.toLowerCase())
+        );
+        tags = [...new Set([...tags, ...relevantSkills])];
         
         const category = determineCategoryFromTags(tags);
-        const isFromBank = i < questionsFromBank;
-        const bankQuestionId = isFromBank ? bankQuestions[i]._id : null;
         
         const question = new Question({
           sessionId: session._id,
@@ -104,8 +78,8 @@ class InterviewController {
           tags,
           difficulty,
           category,
-          isFromBank,
-          bankQuestionId
+          isFromBank: false,
+          bankQuestionId: null
         });
         await question.save();
         savedQuestions.push(question);
