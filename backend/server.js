@@ -62,8 +62,30 @@ app.get('/logo.png', (req, res) => {
   res.sendFile(logoPath)
 })
 
+const dbFreeApiPaths = new Set([
+  '/health',
+  '/auth/logout',
+  '/ats/evaluate-resume',
+  '/resume/parse-for-builder',
+  '/resume/parse-test',
+  '/resume/parse-test-post',
+  '/resume/optimize-text',
+  '/resume/generate-skills',
+  '/resume/ai-summary',
+  '/resume/optimize-bulk',
+  '/resume/generate-summary',
+  '/resume/generate',
+  '/resume/generate-pdf',
+  '/resume/generate-docx',
+  '/resume/generate-pdf-fallback',
+  '/resume/templates',
+  '/resume/templates/list',
+  '/resume/preview',
+  '/resume/optimize'
+]);
+
 const ensureDatabase = async (req, res, next) => {
-  if (req.path === '/health') {
+  if (dbFreeApiPaths.has(req.path)) {
     return next();
   }
 
@@ -83,7 +105,7 @@ const ensureDatabase = async (req, res, next) => {
 };
 
 const ensureAuthConfig = (req, res, next) => {
-  if (!req.path.startsWith('/auth')) {
+  if (!req.path.startsWith('/auth') || req.path === '/auth/logout') {
     return next();
   }
 

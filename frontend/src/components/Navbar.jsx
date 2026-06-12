@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { FiMenu, FiX, FiZap, FiFileText, FiUser, FiLogOut } from 'react-icons/fi'
 import { useAuth } from '../context/authContext'
 import logo from '../assets/Logo.png'
@@ -7,11 +7,13 @@ import logo from '../assets/Logo.png'
 const NAV_LINKS = [
   { label: 'How it works', href: '#how' },
   { label: 'Features',     href: '#features' },
+  { label: 'Resume Builder', href: '/resume-builder' },
   { label: 'ATS Checker',  href: '/ats-checker' },
   { label: 'Leaderboard',  href: '/leaderboard' },
 ]
 
 export default function Navbar() {
+  const navigate = useNavigate()
   const [open, setOpen] = useState(false)
   const [scrolled, setScrolled] = useState(false)
   const [userMenuOpen, setUserMenuOpen] = useState(false)
@@ -24,9 +26,16 @@ export default function Navbar() {
   }, [])
 
   const handleLogout = async () => {
-    await logout()
-    setUserMenuOpen(false)
-    setOpen(false)
+    console.log('Logout button clicked')
+    try {
+      await logout()
+      console.log('Logout completed, clearing UI')
+      setUserMenuOpen(false)
+      setOpen(false)
+      navigate('/')
+    } catch (error) {
+      console.error('Logout error:', error)
+    }
   }
 
   return (
@@ -51,27 +60,6 @@ export default function Navbar() {
               {label}
             </a>
           ))}
-          {isAuthenticated && (
-            <>
-              <Link to="/resume-builder"
-                    className="px-4 py-2 rounded-xl text-sm font-medium text-gray-500
-                               hover:text-violet-700 hover:bg-violet-50 transition-all duration-150">
-                Resume Builder
-              </Link>
-              <Link to="/ats-checker"
-                    className="px-4 py-2 rounded-xl text-sm font-medium text-gray-500
-                               hover:text-violet-700 hover:bg-violet-50 transition-all duration-150">
-                ATS Checker
-              </Link>
-            </>
-          )}
-          {!isAuthenticated && (
-            <Link to="/ats-checker"
-                  className="px-4 py-2 rounded-xl text-sm font-medium text-gray-500
-                             hover:text-violet-700 hover:bg-violet-50 transition-all duration-150">
-              ATS Checker
-            </Link>
-          )}
         </div>
 
         {/* Desktop CTA */}
@@ -161,20 +149,6 @@ export default function Navbar() {
           ))}
           
           <div className="h-px bg-gray-100 my-1" />
-          
-          <Link to="/ats-checker" onClick={() => setOpen(false)}
-                className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium text-gray-600
-                           hover:bg-violet-50 hover:text-violet-700 transition-colors">
-            <FiFileText size={16} /> ATS Checker
-          </Link>
-          
-          {isAuthenticated && (
-            <Link to="/resume-builder" onClick={() => setOpen(false)}
-                  className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium text-gray-600
-                             hover:bg-violet-50 hover:text-violet-700 transition-colors">
-              <FiFileText size={16} /> Resume Builder
-            </Link>
-          )}
           
           <div className="h-px bg-gray-100 my-1" />
           

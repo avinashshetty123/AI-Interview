@@ -121,9 +121,12 @@ const logOut = async (req, res) => {
             sameSite: 'lax',
             path: '/'
         });
+        res.clearCookie('jankoti_auth', {
+            path: '/'
+        });
         res.status(200).json({ 
             success: true,
-            message: 'User logged out successfully' 
+            message: 'Logged out successfully' 
         });
     } catch (error) {
         console.log("Error during logout: ", error);

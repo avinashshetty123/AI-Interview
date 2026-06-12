@@ -24,6 +24,8 @@ router.get('/health', (req, res) => {
 // Public routes (no auth required)
 router.use('/auth', authRoutes);
 router.use('/ats', atsRoutes); // ATS has its own public/protected route handling
+router.use('/leaderboard', leaderboardRoutes);
+router.use('/resume', resumeRoutes);
 
 // Apply auth middleware to all other routes
 router.use(authMiddleware);
@@ -31,9 +33,7 @@ router.use(authMiddleware);
 // Protected routes
 router.use('/', interviewRoutes);
 router.use('/', analysisRoutes);
-router.use('/leaderboard', leaderboardRoutes);
 router.use('/question-bank', questionBankRoutes);
-router.use('/resume', resumeRoutes);
 
 // 404 handler for API routes
 router.use('*', (req, res) => {

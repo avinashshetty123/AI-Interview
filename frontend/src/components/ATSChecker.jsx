@@ -5,8 +5,7 @@ import {
   AlertTriangle, Lightbulb, Tag, LayoutTemplate, Circle, GitCommit,
   Search, Brain, PackageCheck, Filter, Cpu
 } from 'lucide-react';
-
-const API_URL = (import.meta.env.VITE_BACKEND_URL || 'http://localhost:8080/api').replace(/\/$/, '');
+import { apiUrl } from '../lib/api';
 
 // Phase metadata — order matters, this is the sequential display order
 const PHASE_META = {
@@ -165,49 +164,74 @@ export default function ATSChecker() {
     if (githubUrl.trim()) formData.append('github_url', githubUrl.trim());
 
     try {
-      const response = await fetch(`${API_URL}/ats/evaluate-resume`, {
+      const response = await fetch(apiUrl('/ats/evaluate-resume'), {
         method: 'POST',
         body: formData,
+        credentials: 'include',
       });
 
       if (!response.ok) {
-        const err = await response.json();
-        throw new Error(err.error || 'Request failed');
+        let errorMsg = 'Request failed';
+        try {
+          const contentType = response.headers.get('content-type');
+          if (contentType && contentType.includes('application/json')) {
+            const err = await response.json();
+            errorMsg = err.error || err.message || errorMsg;
+          } else {
+            errorMsg = await response.text() || errorMsg;
+          }
+        } catch (e) {
+          errorMsg = 'HTTP ' + response.status + ': ' + response.statusText;
+        }
+        throw new Error(errorMsg);
       }
 
       const reader = response.body.getReader();
       readerRef.current = reader;
       const decoder = new TextDecoder();
       let buffer = '';
+      let hasResult = false;
 
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-
-        buffer += decoder.decode(value, { stream: true });
-        const lines = buffer.split('\n');
-        buffer = lines.pop(); // keep incomplete line
-
-        for (const line of lines) {
-          if (!line.startsWith('data: ')) continue;
-          try {
-            const msg = JSON.parse(line.slice(6));
-            if (msg.type === 'phase') {
-              updatePhase(msg.phase, msg.status, msg.detail);
-            } else if (msg.type === 'result') {
-              setEvaluation(msg);
-              setLoading(false);
-            } else if (msg.type === 'error') {
-              throw new Error(msg.error);
+      try {
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) {
+            if (!hasResult) {
+              throw new Error('Stream ended without result');
             }
-          } catch (parseErr) {
-            if (parseErr.message !== 'Unexpected end of JSON input') {
-              throw parseErr;
+            break;
+          }
+
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split('\n');
+          buffer = lines.pop();
+
+          for (const line of lines) {
+            if (!line.startsWith('data: ')) continue;
+            try {
+              const msg = JSON.parse(line.slice(6));
+              if (msg.type === 'phase') {
+                updatePhase(msg.phase, msg.status, msg.detail);
+              } else if (msg.type === 'result') {
+                setEvaluation(msg);
+                setLoading(false);
+                hasResult = true;
+              } else if (msg.type === 'error') {
+                throw new Error(msg.error);
+              }
+            } catch (parseErr) {
+              console.error('Parse error:', parseErr, 'Line:', line);
+              if (parseErr.message && !parseErr.message.includes('Unexpected end')) {
+                throw parseErr;
+              }
             }
           }
         }
+      } finally {
+        reader.cancel();
       }
     } catch (err) {
+      console.error('ATS Error:', err);
       setError(err.message || 'Failed to evaluate resume');
       setLoading(false);
     }

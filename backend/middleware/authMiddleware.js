@@ -2,6 +2,12 @@ const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 
 const authMiddleware = async (req, res, next) => {
+    // Skip auth for public routes
+    const publicPaths = ['/ats/evaluate-resume', '/health', '/auth/logout'];
+    if (publicPaths.some(path => req.path.startsWith(path))) {
+        return next();
+    }
+
     const token = req.cookies.token;
     if (!token) {
         return res.status(401).json({ 

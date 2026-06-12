@@ -33,7 +33,10 @@ export const AuthProvider = ({ children }) => {
   // Clear authentication data
   const clearAuthData = () => {
     localStorage.removeItem('jankoti_user')
-    document.cookie = 'jankoti_auth=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;'
+    localStorage.removeItem('token')
+    sessionStorage.removeItem('token')
+    document.cookie = 'jankoti_auth=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; SameSite=Lax'
+    document.cookie = 'token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; SameSite=Lax'
     setUser(null)
     setIsAuthenticated(false)
   }
@@ -131,14 +134,18 @@ export const AuthProvider = ({ children }) => {
   }
 
   const logout = async () => {
+    console.log('Logout started - clearing auth data and calling server')
     try {
-      await axios.post(`${API}/auth/logout`, {}, {
+      const response = await axios.post(`${API}/auth/logout`, {}, {
         withCredentials: true
       })
+      console.log('Logout response from server:', response.data)
     } catch (err) {
-      console.log('Logout error:', err)
+      console.log('Logout API error:', err.message)
     } finally {
+      console.log('Clearing local auth data')
       clearAuthData()
+      console.log('Auth data cleared')
     }
   }
 
