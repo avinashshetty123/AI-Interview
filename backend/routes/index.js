@@ -9,7 +9,6 @@ const leaderboardRoutes = require('./leaderboard');
 const questionBankRoutes = require('./questionBank');
 const authRoutes = require('./auth');
 const resumeRoutes = require('./resume');
-const atsRoutes = require('./ats');
 
 // Health check
 router.get('/health', (req, res) => {
@@ -23,7 +22,6 @@ router.get('/health', (req, res) => {
 
 // Public routes (no auth required)
 router.use('/auth', authRoutes);
-router.use('/ats', atsRoutes); // ATS has its own public/protected route handling
 router.use('/leaderboard', leaderboardRoutes);
 router.use('/resume', resumeRoutes);
 
@@ -45,6 +43,7 @@ router.use('*', (req, res) => {
     method: req.method,
     availableRoutes: [
       'GET /api/health',
+      'POST /api/ats/evaluate-resume',
       'POST /api/upload-resume',
       'POST /api/submit-answer',
       'GET /api/session/:id',
