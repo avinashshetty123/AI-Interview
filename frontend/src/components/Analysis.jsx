@@ -23,7 +23,7 @@ const Analysis = ({ sessionId, onBack, onReset }) => {
       const res = await fetch(apiUrl(`/session/${sessionId}/qa`), { credentials: 'include' })
       const data = await res.json()
       if (data.success) setSessionData(data)
-    } catch (e) { console.error(e) }
+    } catch (error) { console.error(error) }
   }
 
   const fetchAnalysis = async () => {
@@ -41,7 +41,7 @@ const Analysis = ({ sessionId, onBack, onReset }) => {
       }
       setError('Click "Generate Analysis" to create your report.')
       setLoading(false)
-    } catch (e) {
+    } catch {
       setError('Network error. Please ensure the backend is running.')
       setLoading(false)
     }
@@ -54,7 +54,7 @@ const Analysis = ({ sessionId, onBack, onReset }) => {
       const data = await res.json()
       if (data.success) setAnalysis(data.analysis)
       else setError(data.error || 'Failed to generate analysis')
-    } catch (e) { setError('Network error.') }
+    } catch { setError('Network error.') }
     finally { setLoading(false) }
   }
 

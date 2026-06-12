@@ -23,7 +23,7 @@ export const loadResumeData = () => {
     const saved = localStorage.getItem(STORAGE_KEY)
     if (saved) {
       const data = JSON.parse(saved)
-      const { lastSaved, version, ...resumeData } = data
+      const { lastSaved: _lastSaved, version: _version, ...resumeData } = data
       return resumeData
     }
     return null

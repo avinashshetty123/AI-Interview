@@ -59,6 +59,14 @@ export default function Home() {
                              hover:scale-[1.03] active:scale-95 transition-all duration-200">
               <FiZap size={15} /> Start Free Interview
             </Link>
+            <Link to="/ats-checker"
+                  className="flex items-center gap-2 px-7 py-3.5 rounded-2xl text-sm font-bold text-white
+                             bg-gradient-to-r from-blue-600 to-cyan-500
+                             shadow-[0_8px_28px_rgba(59,130,246,0.45)]
+                             hover:shadow-[0_12px_36px_rgba(59,130,246,0.55)]
+                             hover:scale-[1.03] active:scale-95 transition-all duration-200">
+              <FiShield size={15} /> Check Resume
+            </Link>
             <Link to="/resume-builder"
                   className="flex items-center gap-2 px-7 py-3.5 rounded-2xl text-sm font-bold text-white
                              bg-gradient-to-r from-green-600 to-emerald-500
@@ -162,7 +170,13 @@ export default function Home() {
                   className="relative inline-flex items-center gap-2 px-8 py-3.5 rounded-2xl
                              text-sm font-bold text-violet-700 bg-white
                              hover:scale-[1.04] active:scale-95 shadow-lg transition-all duration-200">
-              <FiZap size={15} /> Get Started — It's Free
+              <FiZap size={15} /> Start Interview
+            </Link>
+            <Link to="/ats-checker"
+                  className="relative inline-flex items-center gap-2 px-8 py-3.5 rounded-2xl
+                             text-sm font-bold text-blue-700 bg-white
+                             hover:scale-[1.04] active:scale-95 shadow-lg transition-all duration-200">
+              <FiShield size={15} /> Check Resume
             </Link>
           </div>
         </div>

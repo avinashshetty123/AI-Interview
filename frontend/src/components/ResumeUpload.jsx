@@ -69,7 +69,7 @@ const ResumeUpload = ({ onResumeUploaded }) => {
         setError(data.error || 'Failed to process resume')
         setUploadProgress(0)
       }
-    } catch (err) {
+    } catch {
       setError('Network error. Please ensure all services are running.')
       setUploadProgress(0)
     } finally {

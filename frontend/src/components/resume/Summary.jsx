@@ -5,7 +5,7 @@ import { apiUrl } from '../../lib/api'
 const Summary = ({ data, onChange, onNext, onPrev, resumeData, onOptimizeText }) => {
   const [isGenerating, setIsGenerating] = useState(false)
   const [isOptimizing, setIsOptimizing] = useState(false)
-  const [suggestions, setSuggestions] = useState([])
+  const [suggestions] = useState([])
 
   const getSkillName = (skill) => {
     if (typeof skill === 'string') return skill

@@ -13,7 +13,7 @@ const PDFPreview = ({ data, onPrev, onComplete }) => {
   const [previewMode, setPreviewMode] = useState('desktop')
   const [templates, setTemplates] = useState([])
   const [previewHtml, setPreviewHtml] = useState('')
-  const [error, setError] = useState(null)
+  const [, setError] = useState(null)
   const [downloadProgress, setDownloadProgress] = useState(0)
 
   const sanitizeResumeHtml = (html) => {
@@ -306,7 +306,7 @@ const PDFPreview = ({ data, onPrev, onComplete }) => {
             
             alert('Your resume has opened in a new window. Use Ctrl+P (or Cmd+P on Mac) to print it as PDF.')
           }
-        } catch (fallbackError) {
+        } catch {
           alert('All PDF generation methods failed. Please try again later.')
         }
       }
@@ -376,7 +376,7 @@ const PDFPreview = ({ data, onPrev, onComplete }) => {
       try {
         await navigator.clipboard.writeText(window.location.href)
         alert('Resume link copied to clipboard!')
-      } catch (error) {
+      } catch {
         console.log('Could not copy to clipboard')
       }
     }

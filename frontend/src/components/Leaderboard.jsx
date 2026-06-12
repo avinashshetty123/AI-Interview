@@ -225,7 +225,7 @@ const Leaderboard = ({ onBack }) => {
             </div>
           ) : (
             <div className="divide-y divide-gray-100">
-              {leaderboard.map((entry, index) => (
+              {leaderboard.map((entry) => (
                 <div key={entry._id} className="p-6 hover:bg-gray-50 transition-colors">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center space-x-4">

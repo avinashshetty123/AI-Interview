@@ -22,7 +22,7 @@ import ResumeUploadParser from './resume/ResumeUploadParser'
 import logo from '../assets/Logo.png'
 
 const ResumeBuilder = ({ onBack }) => {
-  const { user } = useAuth()
+  const { user, isAuthenticated } = useAuth()
   const [currentStep, setCurrentStep] = useState(0)
   const [resumeData, setResumeData] = useState(getDefaultResumeData())
   const [atsScore, setAtsScore] = useState(0)
@@ -59,7 +59,7 @@ const ResumeBuilder = ({ onBack }) => {
         }
 
         // Merge saved data with user data
-        const finalData = mergeWithUserData(savedData, user)
+        const finalData = mergeWithUserData(savedData, isAuthenticated ? user : null)
         setResumeData(finalData)
         
         // Calculate initial ATS score
@@ -272,39 +272,6 @@ const ResumeBuilder = ({ onBack }) => {
     }
   }
   
-  const generateAISkills = async () => {
-    try {
-      const response = await fetch(apiUrl('/resume/generate-skills'), {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        credentials: 'include',
-        body: JSON.stringify({
-          experience: resumeData.experience,
-          projects: resumeData.projects,
-          education: resumeData.education
-        }),
-      })
-      
-      const data = await response.json()
-      
-      if (data.success) {
-        setResumeData(prev => ({
-          ...prev,
-          skills: {
-            technical: [...new Set([...(prev.skills?.technical || []), ...data.skills.technical])],
-            soft: [...new Set([...(prev.skills?.soft || []), ...data.skills.soft])]
-          }
-        }))
-        alert('AI-generated skills have been added to your resume!')
-      }
-    } catch (error) {
-      console.error('Skills generation error:', error)
-      alert('Failed to generate skills. Please try again.')
-    }
-  }
-
   const renderStepContent = () => {
     const StepComponent = steps[currentStep].component
     

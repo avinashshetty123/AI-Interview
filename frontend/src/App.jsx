@@ -5,10 +5,11 @@ import Signup from './pages/Signup'
 import InterviewPage from './pages/InterviewPage'
 import Leaderboard from './components/Leaderboard'
 import ResumeBuilder from './components/ResumeBuilder'
+import ATSChecker from './components/ATSChecker'
 import { useAuth } from './context/authContext'
 
 function ProtectedRoute({ children }) {
-  const { user, loading, isAuthenticated } = useAuth()
+  const { loading, isAuthenticated } = useAuth()
   
   if (loading) return (
     <div className="min-h-screen flex items-center justify-center">
@@ -29,7 +30,8 @@ function App() {
       <Route path="/login"         element={<Login />} />
       <Route path="/signup"        element={<Signup />} />
       <Route path="/leaderboard"   element={<Leaderboard onBack={() => window.history.back()} />} />
-      <Route path="/resume-builder" element={<ProtectedRoute><ResumeBuilder onBack={() => window.history.back()} /></ProtectedRoute>} />
+      <Route path="/ats-checker"    element={<ATSChecker onBack={() => window.history.back()} />} />
+      <Route path="/resume-builder" element={<ResumeBuilder onBack={() => window.history.back()} />} />
       <Route path="/interview"     element={<ProtectedRoute><InterviewPage /></ProtectedRoute>} />
     </Routes>
   )

@@ -26,7 +26,7 @@ const ViewQA = () => {
       } else {
         setError(data.error || 'Failed to fetch sessions')
       }
-    } catch (err) {
+    } catch {
       setError('Network error. Please ensure backend is running.')
     } finally {
       setLoading(false)
@@ -45,7 +45,7 @@ const ViewQA = () => {
       } else {
         setError(data.error || 'Failed to fetch Q&A data')
       }
-    } catch (err) {
+    } catch {
       setError('Network error. Please ensure backend is running.')
     } finally {
       setLoading(false)
@@ -205,7 +205,7 @@ const ViewQA = () => {
 
             {/* Questions and Answers */}
             <div className="space-y-4">
-              {qaData.questionsAndAnswers.map((qa, index) => (
+              {qaData.questionsAndAnswers.map((qa) => (
                 <Card key={qa.questionId} className="bg-white/95 backdrop-blur-sm shadow-lg border-0">
                   <CardHeader className={`${qa.hasAnswer ? 'bg-green-50' : 'bg-gray-50'} border-b`}>
                     <div className="flex items-center justify-between">

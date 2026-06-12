@@ -7,6 +7,7 @@ import logo from '../assets/Logo.png'
 const NAV_LINKS = [
   { label: 'How it works', href: '#how' },
   { label: 'Features',     href: '#features' },
+  { label: 'ATS Checker',  href: '/ats-checker' },
   { label: 'Leaderboard',  href: '/leaderboard' },
 ]
 
@@ -51,10 +52,24 @@ export default function Navbar() {
             </a>
           ))}
           {isAuthenticated && (
-            <Link to="/resume-builder"
+            <>
+              <Link to="/resume-builder"
+                    className="px-4 py-2 rounded-xl text-sm font-medium text-gray-500
+                               hover:text-violet-700 hover:bg-violet-50 transition-all duration-150">
+                Resume Builder
+              </Link>
+              <Link to="/ats-checker"
+                    className="px-4 py-2 rounded-xl text-sm font-medium text-gray-500
+                               hover:text-violet-700 hover:bg-violet-50 transition-all duration-150">
+                ATS Checker
+              </Link>
+            </>
+          )}
+          {!isAuthenticated && (
+            <Link to="/ats-checker"
                   className="px-4 py-2 rounded-xl text-sm font-medium text-gray-500
                              hover:text-violet-700 hover:bg-violet-50 transition-all duration-150">
-              Resume Builder
+              ATS Checker
             </Link>
           )}
         </div>
@@ -144,6 +159,14 @@ export default function Navbar() {
               {label}
             </a>
           ))}
+          
+          <div className="h-px bg-gray-100 my-1" />
+          
+          <Link to="/ats-checker" onClick={() => setOpen(false)}
+                className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium text-gray-600
+                           hover:bg-violet-50 hover:text-violet-700 transition-colors">
+            <FiFileText size={16} /> ATS Checker
+          </Link>
           
           {isAuthenticated && (
             <Link to="/resume-builder" onClick={() => setOpen(false)}

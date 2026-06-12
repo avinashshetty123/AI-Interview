@@ -1,5 +1,6 @@
 const express = require('express');
 const router = express.Router();
+const authMiddleware = require('../middleware/authMiddleware');
 
 // Import route modules
 const interviewRoutes = require('./interview');
@@ -8,6 +9,7 @@ const leaderboardRoutes = require('./leaderboard');
 const questionBankRoutes = require('./questionBank');
 const authRoutes = require('./auth');
 const resumeRoutes = require('./resume');
+const atsRoutes = require('./ats');
 
 // Health check
 router.get('/health', (req, res) => {
@@ -19,12 +21,18 @@ router.get('/health', (req, res) => {
   });
 });
 
-// Mount routes
+// Public routes (no auth required)
+router.use('/auth', authRoutes);
+router.use('/ats', atsRoutes); // ATS has its own public/protected route handling
+
+// Apply auth middleware to all other routes
+router.use(authMiddleware);
+
+// Protected routes
 router.use('/', interviewRoutes);
 router.use('/', analysisRoutes);
 router.use('/leaderboard', leaderboardRoutes);
 router.use('/question-bank', questionBankRoutes);
-router.use('/auth', authRoutes);
 router.use('/resume', resumeRoutes);
 
 // 404 handler for API routes
