@@ -3,9 +3,11 @@ const express = require('express');
 const cors = require('cors');
 const cookieParser = require('cookie-parser');
 const path = require('path');
+const multer = require('multer');
 const connectDB = require('./config/database');
 const routes = require('./routes');
 const errorHandler = require('./middleware/errorHandler');
+const atsController = require('./controllers/atsController');
 
 const app = express();
 const PORT = process.env.PORT || 8080;
@@ -119,6 +121,35 @@ const ensureAuthConfig = (req, res, next) => {
 
   next();
 };
+
+// Configure multer for ATS
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 10 * 1024 * 1024 },
+  fileFilter: (req, file, cb) => {
+    const allowed = /\.(pdf|docx|txt|doc)$/i;
+    if (allowed.test(path.extname(file.originalname))) {
+      cb(null, true);
+    } else {
+      cb(new Error('Only PDF, DOCX, TXT files allowed'));
+    }
+  },
+});
+
+// ATS public endpoint - BEFORE main routes to bypass auth
+app.options('/api/ats/evaluate-resume', (req, res) => {
+  res.setHeader('Access-Control-Allow-Origin', req.headers.origin || 'http://localhost:5173');
+  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  res.setHeader('Access-Control-Allow-Credentials', 'true');
+  res.sendStatus(200);
+});
+
+app.post('/api/ats/evaluate-resume', upload.single('resume'), (req, res) => {
+  res.setHeader('Access-Control-Allow-Origin', req.headers.origin || 'http://localhost:5173');
+  res.setHeader('Access-Control-Allow-Credentials', 'true');
+  atsController.evaluateResumePublic(req, res);
+});
 
 // Routes
 app.use('/api', ensureDatabase, ensureAuthConfig, routes);
