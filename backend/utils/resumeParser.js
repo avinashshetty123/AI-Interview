@@ -76,9 +76,7 @@ class ResumeParser {
     const skills = new Set();
     const skillSections = ['skills', 'technologies', 'experience', 'projects', 'header'];
     
-    // Enhanced skill patterns for better extraction
     const skillPatterns = {
-      // Programming Languages
       'javascript': /\b(javascript|js|node\.?js|react|vue|angular|express)\b/gi,
       'python': /\b(python|django|flask|pandas|numpy|fastapi)\b/gi,
       'java': /\b(java|spring|hibernate|maven|gradle)\b/gi,
@@ -98,19 +96,16 @@ class ResumeParser {
       'security': /\b(security|authentication|jwt|oauth|encryption)\b/gi
     };
     
-    // Extract from all relevant sections
     for (const section of skillSections) {
       if (sections[section]) {
         const sectionText = sections[section].join(' ');
         
-        // Use pattern matching for better skill extraction
         Object.entries(skillPatterns).forEach(([skill, pattern]) => {
           if (pattern.test(sectionText)) {
             skills.add(skill);
           }
         });
         
-        // Also extract explicit skills from skills section
         if (section === 'skills') {
           for (const line of sections[section]) {
             const cleanLine = line.replace(/^[A-Za-z/&\s]+:?\s*/, '').trim();
@@ -135,8 +130,6 @@ class ResumeParser {
   extractProjects(sections) {
     if (!sections.projects) return [];
 
-    // Join all lines, replacing lone "-" separators with a bullet marker
-    // then re-split cleanly
     const rawLines = sections.projects;
     const merged = [];
 
@@ -144,34 +137,29 @@ class ResumeParser {
       const trimmed = rawLines[i].trim();
       if (!trimmed) continue;
 
-      // Lone dash/bullet = the NEXT line is bullet content
-      if (/^[-\u2022\*]$/.test(trimmed)) {
-        // peek at next line and prepend bullet marker
+      if (/^[-•\*]$/.test(trimmed)) {
         if (i + 1 < rawLines.length) {
-          merged.push('\u2022 ' + rawLines[i + 1].trim());
-          i++; // skip next line, already consumed
+          merged.push('• ' + rawLines[i + 1].trim());
+          i++;
         }
         continue;
       }
 
-      // Line starting with "- text" or "• text"
-      if (/^[-\u2022\*]\s+/.test(trimmed)) {
-        merged.push('\u2022 ' + trimmed.replace(/^[-\u2022\*]\s+/, ''));
+      if (/^[-•\*]\s+/.test(trimmed)) {
+        merged.push('• ' + trimmed.replace(/^[-•\*]\s+/, ''));
         continue;
       }
 
       merged.push(trimmed);
     }
 
-    // Now parse merged lines: title lines contain "|", bullet lines start with "•"
     const projects = [];
     let current = null;
 
     for (const line of merged) {
-      const isBullet = line.startsWith('\u2022 ');
+      const isBullet = line.startsWith('• ');
 
       if (!isBullet && line.includes('|')) {
-        // Project title line: "Name| Subtitle"
         if (current) projects.push(current);
         const pipeIdx = line.indexOf('|');
         current = {
@@ -180,11 +168,9 @@ class ResumeParser {
           highlights: []
         };
       } else if (!isBullet && !current) {
-        // Plain title with no pipe (fallback)
         current = { title: line, description: '', highlights: [] };
       } else if (isBullet && current) {
-        const content = line.replace('\u2022 ', '').trim();
-        // If last highlight ends without punctuation, it may be a wrapped continuation
+        const content = line.replace('• ', '').trim();
         if (
           current.highlights.length > 0 &&
           !/[.!?]$/.test(current.highlights[current.highlights.length - 1]) &&
@@ -195,7 +181,6 @@ class ResumeParser {
           current.highlights.push(content);
         }
       } else if (!isBullet && current) {
-        // Plain text after a title but before any bullet — append to description
         current.description += (current.description ? ' ' : '') + line;
       }
     }
@@ -212,18 +197,29 @@ class ResumeParser {
     if (!sections.experience) return [];
     
     const experiences = [];
-    const datePattern = /\b(19|20)\d{2}\b/g;
+    const lines = sections.experience.filter(l => l.trim());
     
-    for (const line of sections.experience) {
-      const dates = line.match(datePattern);
-      if (dates && line.length > 20) {
-        const parts = line.split(/\s+at\s+|\s+@\s+|\s*,\s*/);
-        experiences.push({
-          title: parts[0] || '',
-          company: parts[1] || '',
-          dates: dates.join(' - '),
-          description: line
-        });
+    for (const line of lines) {
+      if (line.length < 15) continue;
+      
+      // Match patterns like: "Title at Company" or "Title | Company"
+      const titleCompanyMatch = line.match(/^([A-Z][^@|]*?)\s+(?:at|@|\|)\s+([A-Z][^-\n\d]*)/i);
+      if (titleCompanyMatch) {
+        const title = titleCompanyMatch[1].trim();
+        const company = titleCompanyMatch[2].trim();
+        
+        // Extract dates from the line
+        const dateMatch = line.match(/(\d{4}|\w+)\s*[-–]\s*(\d{4}|\w+|Present)/i);
+        const dates = dateMatch ? `${dateMatch[1]} - ${dateMatch[2]}` : '';
+        
+        if (title.length > 3 && title.length < 100) {
+          experiences.push({
+            title,
+            company,
+            dates,
+            description: line
+          });
+        }
       }
     }
     
@@ -234,7 +230,7 @@ class ResumeParser {
     if (!sections.education) return [];
     
     const education = [];
-    const degreeKeywords = ['bachelor', 'master', 'phd', 'b.s.', 'b.a.', 'm.s.', 'm.a.', 'b.tech', 'm.tech'];
+    const degreeKeywords = ['bachelor', 'master', 'phd', 'b.s.', 'b.a.', 'm.s.', 'm.a.', 'b.tech', 'm.tech', 'diploma'];
     
     for (const line of sections.education) {
       if (degreeKeywords.some(kw => line.toLowerCase().includes(kw))) {
@@ -258,7 +254,6 @@ class ResumeParser {
     let score = 0;
     const suggestions = [];
     
-    // Essential sections (30 points)
     const essentialSections = ['summary', 'skills', 'experience', 'education', 'projects'];
     for (const section of essentialSections) {
       if (sections[section] && sections[section].length > 0) {
@@ -268,13 +263,11 @@ class ResumeParser {
       }
     }
     
-    // Skills count (20 points)
     if (skills.length >= 15) score += 20;
     else if (skills.length >= 10) score += 15;
     else if (skills.length >= 5) score += 10;
     else suggestions.push('List more technical skills (aim for 10+)');
     
-    // Projects (20 points)
     if (projects.length > 0) {
       const avgDescLength = projects.reduce((sum, p) => sum + p.description.length, 0) / projects.length;
       if (avgDescLength > 100) score += 20;
@@ -284,11 +277,9 @@ class ResumeParser {
       suggestions.push('Include detailed project descriptions');
     }
     
-    // Experience (15 points)
     if (experience.length > 0) score += 15;
     else suggestions.push('Add work experience or internships');
     
-    // Contact info (15 points)
     const headerText = sections.header ? sections.header.join(' ') : '';
     if (/@/.test(headerText) || /\d{10}/.test(headerText)) score += 15;
     else suggestions.push('Include contact information');

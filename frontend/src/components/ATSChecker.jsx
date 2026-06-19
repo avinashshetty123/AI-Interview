@@ -1,39 +1,30 @@
 import React, { useState, useRef } from 'react';
 import {
   Upload, BarChart3, TrendingUp, Loader2, AlertCircle, CheckCircle2,
-  RefreshCw, FileText, Zap, Briefcase, Code2, Star, GitBranch,
-  AlertTriangle, Lightbulb, Tag, LayoutTemplate, Circle, GitCommit,
-  Search, Brain, PackageCheck, Filter, Cpu
+  RefreshCw, FileText, Zap, Briefcase, Code2, Star, Search,
+  AlertTriangle, Lightbulb, Tag, LayoutTemplate, Circle
 } from 'lucide-react';
 import { apiUrl } from '../lib/api';
 
-// Phase metadata — order matters, this is the sequential display order
 const PHASE_META = {
-  file_parse:      { label: 'Reading Resume File',          icon: FileText,    desc: 'Extracting raw text from uploaded file' },
-  parse_basics:    { label: 'Parsing Basic Info',           icon: FileText,    desc: 'Name, email, phone, profiles, summary' },
-  parse_work:      { label: 'Parsing Work Experience',      icon: Briefcase,   desc: 'Companies, roles, dates, achievements' },
-  parse_education: { label: 'Parsing Education',            icon: GitCommit,   desc: 'Institutions, degrees, scores' },
-  parse_skills:    { label: 'Parsing Skills',               icon: Cpu,         desc: 'Languages, frameworks, tools' },
-  parse_projects:  { label: 'Parsing Projects',             icon: Code2,       desc: 'Project names, descriptions, URLs, tech stack' },
-  parse_awards:    { label: 'Parsing Awards & Certs',       icon: Star,        desc: 'Achievements, certifications, honors' },
-  role_detect:     { label: 'Detecting Role Type',          icon: Search,      desc: 'Tech vs non-tech — determines scoring criteria & checks' },
-  github_detect:   { label: 'Detecting GitHub URL',         icon: GitBranch,   desc: '[Tech only] Scanning for GitHub profile link' },
-  github_profile:  { label: 'Fetching GitHub Profile',      icon: GitBranch,   desc: '[Tech only] Profile stats, repo count, followers' },
-  github_repos:    { label: 'Fetching All Repositories',    icon: GitCommit,   desc: '[Tech only] Commit counts & contributor data per repo' },
-  github_select:   { label: 'Selecting Top Projects',       icon: Filter,      desc: '[Tech only] AI picking 7 most impressive repos' },
-  profile_check:   { label: 'Validating Profile Links',     icon: Search,      desc: '[Non-tech only] Checking LinkedIn, portfolio, blog links' },
-  build_context:   { label: 'Building Evaluation Context',  icon: PackageCheck,desc: 'Combining structured resume + enrichment data' },
-  ai_score:        { label: 'AI Deep Scoring',              icon: Brain,       desc: 'Role-specific dimensions + bonus/deductions' },
-  validate:        { label: 'Validating & Finalising',      icon: Cpu,         desc: 'Enforcing score caps, computing final percentage' },
+  file_parse: { label: 'Reading Resume', desc: 'Extracting text from file' },
+  parse_basics: { label: 'Parsing Basic Info', desc: 'Name, email, contacts' },
+  parse_work: { label: 'Parsing Work Experience', desc: 'Companies, roles, dates' },
+  parse_education: { label: 'Parsing Education', desc: 'Degrees, institutions' },
+  parse_skills: { label: 'Parsing Skills', desc: 'Professional competencies' },
+  parse_projects: { label: 'Parsing Projects', desc: 'Professional projects' },
+  role_detect: { label: 'Detecting Job Role', desc: 'Identifying career field for accurate scoring' },
+  ai_score: { label: 'AI Evaluation', desc: 'Professional ATS scoring' },
+  validate: { label: 'Finalizing Results', desc: 'Computing final score' },
 };
 
 const PHASE_ORDER = Object.keys(PHASE_META);
 
 const scoreColor = (pct) => {
   if (pct >= 80) return { bar: 'from-emerald-500 to-teal-500', text: 'text-emerald-400' };
-  if (pct >= 60) return { bar: 'from-blue-500 to-cyan-500',    text: 'text-blue-400' };
+  if (pct >= 60) return { bar: 'from-blue-500 to-cyan-500', text: 'text-blue-400' };
   if (pct >= 40) return { bar: 'from-amber-500 to-orange-500', text: 'text-amber-400' };
-  return             { bar: 'from-rose-500 to-red-500',         text: 'text-rose-400' };
+  return { bar: 'from-rose-500 to-red-500', text: 'text-rose-400' };
 };
 
 const ScoreBar = ({ label, icon, score, max, evidence }) => {
@@ -75,7 +66,6 @@ const ListSection = ({ title, icon, items, colorClass, bulletColor }) => {
   );
 };
 
-// Sequential phase tracker UI
 const PhaseTracker = ({ phases }) => (
   <div className="bg-slate-800/50 border border-slate-700 rounded-2xl p-6 space-y-1">
     <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-4">Evaluation Progress</p>
@@ -84,16 +74,15 @@ const PhaseTracker = ({ phases }) => (
       const phase = phases[key];
       const status = phase?.status || 'pending';
       const detail = phase?.detail || meta.desc;
-      const Icon = meta.icon;
+      const Icon = meta.icon || FileText;
 
       return (
         <div key={key} className="flex items-start gap-3 py-2">
-          {/* connector line */}
           <div className="flex flex-col items-center">
             <div className={`w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 transition-all duration-300 ${
-              status === 'done'   ? 'bg-emerald-500/20 border border-emerald-500/50' :
+              status === 'done' ? 'bg-emerald-500/20 border border-emerald-500/50' :
               status === 'active' ? 'bg-blue-500/20 border border-blue-500/60 animate-pulse' :
-                                    'bg-slate-700/50 border border-slate-600'
+              'bg-slate-700/50 border border-slate-600'
             }`}>
               {status === 'done' ? (
                 <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
@@ -109,14 +98,8 @@ const PhaseTracker = ({ phases }) => (
               }`} />
             )}
           </div>
-
-          {/* content */}
           <div className="flex-1 min-w-0 pb-1">
             <div className="flex items-center gap-2">
-              <Icon className={`w-3.5 h-3.5 flex-shrink-0 ${
-                status === 'done' ? 'text-emerald-400' :
-                status === 'active' ? 'text-blue-400' : 'text-slate-600'
-              }`} />
               <span className={`text-sm font-medium ${
                 status === 'done' ? 'text-slate-200' :
                 status === 'active' ? 'text-blue-300' : 'text-slate-500'
@@ -124,11 +107,8 @@ const PhaseTracker = ({ phases }) => (
               {status === 'active' && (
                 <span className="text-xs px-1.5 py-0.5 bg-blue-500/20 text-blue-400 rounded-full">running</span>
               )}
-              {status === 'done' && (
-                <span className="text-xs px-1.5 py-0.5 bg-emerald-500/20 text-emerald-400 rounded-full">done</span>
-              )}
             </div>
-            <p className={`text-xs mt-0.5 leading-relaxed truncate ${
+            <p className={`text-xs mt-0.5 leading-relaxed ${
               status === 'pending' ? 'text-slate-600' : 'text-slate-400'
             }`}>{detail}</p>
           </div>
@@ -140,12 +120,10 @@ const PhaseTracker = ({ phases }) => (
 
 export default function ATSChecker() {
   const [file, setFile] = useState(null);
-  const [githubUrl, setGithubUrl] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [evaluation, setEvaluation] = useState(null);
   const [phases, setPhases] = useState({});
-  const readerRef = useRef(null);
 
   const updatePhase = (phase, status, detail) =>
     setPhases(prev => ({ ...prev, [phase]: { status, detail } }));
@@ -161,7 +139,6 @@ export default function ATSChecker() {
 
     const formData = new FormData();
     formData.append('resume', file);
-    if (githubUrl.trim()) formData.append('github_url', githubUrl.trim());
 
     try {
       const response = await fetch(apiUrl('/ats/evaluate-resume'), {
@@ -177,17 +154,14 @@ export default function ATSChecker() {
           if (contentType && contentType.includes('application/json')) {
             const err = await response.json();
             errorMsg = err.error || err.message || errorMsg;
-          } else {
-            errorMsg = await response.text() || errorMsg;
           }
         } catch (e) {
-          errorMsg = 'HTTP ' + response.status + ': ' + response.statusText;
+          errorMsg = `HTTP ${response.status}: ${response.statusText}`;
         }
         throw new Error(errorMsg);
       }
 
       const reader = response.body.getReader();
-      readerRef.current = reader;
       const decoder = new TextDecoder();
       let buffer = '';
       let hasResult = false;
@@ -196,9 +170,7 @@ export default function ATSChecker() {
         while (true) {
           const { done, value } = await reader.read();
           if (done) {
-            if (!hasResult) {
-              throw new Error('Stream ended without result');
-            }
+            if (!hasResult) throw new Error('Stream ended without result');
             break;
           }
 
@@ -220,7 +192,6 @@ export default function ATSChecker() {
                 throw new Error(msg.error);
               }
             } catch (parseErr) {
-              console.error('Parse error:', parseErr, 'Line:', line);
               if (parseErr.message && !parseErr.message.includes('Unexpected end')) {
                 throw parseErr;
               }
@@ -240,37 +211,24 @@ export default function ATSChecker() {
   const reset = () => {
     setEvaluation(null);
     setFile(null);
-    setGithubUrl('');
     setPhases({});
     setError(null);
   };
 
   const mainScore = evaluation?.score ?? 0;
   const mc = scoreColor(mainScore);
-
-  const SCORE_CATEGORIES_TECH = [
-    { key: 'open_source',      label: 'Open Source',        icon: GitBranch, max: 35 },
-    { key: 'self_projects',    label: 'Self Projects',       icon: Code2,     max: 30 },
-    { key: 'production',       label: 'Production / Work',   icon: Briefcase, max: 25 },
-    { key: 'technical_skills', label: 'Technical Skills',    icon: Star,      max: 10 },
-  ];
-
-  const SCORE_CATEGORIES_NONTECH = [
-    { key: 'work_experience',     label: 'Work Experience',     icon: Briefcase, max: 35 },
-    { key: 'skills_and_tools',    label: 'Skills & Tools',      icon: Star,      max: 25 },
-    { key: 'projects_and_impact', label: 'Projects & Impact',   icon: Code2,     max: 25 },
-    { key: 'education_and_certs', label: 'Education & Certs',   icon: GitCommit, max: 15 },
-  ];
-
-  const SCORE_CATEGORIES = evaluation?.roleType === 'non-tech'
-    ? SCORE_CATEGORIES_NONTECH
-    : SCORE_CATEGORIES_TECH;
-
   const showPhaseTracker = loading || (Object.keys(phases).length > 0 && !evaluation);
+
+  const SCORE_CATEGORIES = [
+    { key: 'experience_quality', label: 'Experience Quality', icon: Briefcase, max: 30 },
+    { key: 'skill_relevance', label: 'Skill Relevance', icon: Star, max: 25 },
+    { key: 'achievement_metrics', label: 'Achievement Metrics', icon: TrendingUp, max: 20 },
+    { key: 'presentation_quality', label: 'Presentation Quality', icon: FileText, max: 15 },
+    { key: 'completeness', label: 'Completeness', icon: CheckCircle2, max: 10 },
+  ];
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950">
-      {/* Header */}
       <header className="border-b border-slate-700 bg-slate-950/80 backdrop-blur-md sticky top-0 z-40">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-5">
           <div className="flex items-center gap-3">
@@ -279,9 +237,9 @@ export default function ATSChecker() {
             </div>
             <div>
               <h1 className="text-2xl font-bold bg-gradient-to-r from-blue-400 to-cyan-400 bg-clip-text text-transparent">
-                ATS Deep Evaluator
+                Professional Resume Evaluator
               </h1>
-              <p className="text-slate-400 text-xs">Real GitHub analysis · Strict scoring · Actionable feedback</p>
+              <p className="text-slate-400 text-xs">Accurate ATS scoring · Role-specific evaluation · Works for any profession</p>
             </div>
           </div>
         </div>
@@ -296,7 +254,6 @@ export default function ATSChecker() {
         )}
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Left panel */}
           <div className="lg:col-span-1 space-y-5">
             <form onSubmit={handleEvaluate} className="bg-slate-800/50 border border-slate-700 rounded-2xl p-6">
               <h2 className="text-lg font-bold text-white mb-5">Upload Resume</h2>
@@ -312,107 +269,71 @@ export default function ATSChecker() {
                 </div>
               </label>
 
-              {/* GitHub URL override — auto-detected from resume, manual entry disabled
-              <div className="mb-5">
-                <label className="flex items-center gap-2 text-sm font-semibold text-slate-200 mb-2">
-                  <GitBranch className="w-4 h-4" /> GitHub URL
-                  <span className="text-xs text-slate-500 font-normal">(optional override)</span>
-                </label>
-                <input
-                  type="url"
-                  placeholder="https://github.com/username"
-                  value={githubUrl}
-                  onChange={(e) => setGithubUrl(e.target.value)}
-                  className="w-full px-3 py-2.5 bg-slate-700/50 border border-slate-600 rounded-lg text-sm text-slate-200 placeholder-slate-500 focus:outline-none focus:border-blue-500"
-                />
-                <p className="text-xs text-slate-500 mt-1">
-                  Auto-detected from resume for tech roles. Only needed if your GitHub URL isn't on your resume.
-                </p>
-              </div>
-              */}
-
               <button type="submit" disabled={loading || !file}
                 className="w-full py-3 bg-gradient-to-r from-blue-600 to-cyan-500 hover:from-blue-700 hover:to-cyan-600 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold rounded-lg transition-all flex items-center justify-center gap-2">
-                {loading ? <><Loader2 className="w-4 h-4 animate-spin" /> Evaluating...</> : <><Zap className="w-4 h-4" /> Deep Evaluate</>}
+                {loading ? <><Loader2 className="w-4 h-4 animate-spin" /> Evaluating...</> : <><Zap className="w-4 h-4" /> Evaluate Resume</>}
               </button>
             </form>
 
-            {/* Phase tracker — shows during loading */}
             {showPhaseTracker && <PhaseTracker phases={phases} />}
 
-            {/* Static info — only when idle */}
             {!loading && !evaluation && Object.keys(phases).length === 0 && (
               <div className="bg-slate-800/50 border border-slate-700 rounded-2xl p-5 space-y-2 text-xs text-slate-400">
-                <p className="font-semibold text-slate-300 text-sm mb-3">What we check:</p>
+                <p className="font-semibold text-slate-300 text-sm mb-3">Evaluation Criteria:</p>
                 {[
-                  ['🔓', 'Open source contributions (real GitHub commits)'],
-                  ['🚀', 'Project quality & complexity'],
-                  ['💼', 'Work experience & internships'],
-                  ['⚙️', 'Technical skills breadth'],
-                  ['⭐', 'Bonuses: GSoC, portfolio, blogs, LeetCode'],
-                  ['🔑', 'Missing ATS keywords'],
-                  ['📋', 'Resume format issues'],
-                  ['📌', 'Actionable fix recommendations'],
+                  ['💼', 'Experience Quality & Progression'],
+                  ['🎯', 'Skill Relevance to Your Role'],
+                  ['📊', 'Quantified Achievements & Metrics'],
+                  ['✍️', 'Professional Presentation'],
+                  ['✅', 'Complete Section Coverage'],
                 ].map(([icon, text]) => (
                   <p key={text} className="flex items-start gap-2"><span>{icon}</span><span>{text}</span></p>
                 ))}
-                <p className="text-slate-500 pt-2 border-t border-slate-700">⏱ With GitHub: ~1-3 min</p>
               </div>
             )}
           </div>
 
-          {/* Right panel */}
           <div className="lg:col-span-2">
             {!evaluation && !loading && Object.keys(phases).length === 0 && (
               <div className="bg-slate-800/40 border border-slate-700 rounded-2xl p-16 text-center">
                 <div className="p-5 bg-blue-500/10 border border-blue-500/20 rounded-2xl inline-block mb-5">
                   <FileText className="w-10 h-10 text-blue-400" />
                 </div>
-                <h3 className="text-lg font-bold text-slate-200 mb-2">Ready for Deep Analysis</h3>
+                <h3 className="text-lg font-bold text-slate-200 mb-2">Accurate Resume Evaluation</h3>
                 <p className="text-slate-400 text-sm max-w-sm mx-auto">
-                  Upload your resume and optionally add your GitHub URL for a thorough evaluation with real commit-level data.
+                  Get professional ATS scoring tailored to your career field. Accurate metrics based on actual professional standards.
                 </p>
               </div>
             )}
 
-            {/* Loading placeholder in right panel */}
             {loading && (
               <div className="bg-slate-800/40 border border-slate-700 rounded-2xl p-16 text-center">
                 <Loader2 className="w-10 h-10 text-blue-400 animate-spin mx-auto mb-4" />
-                <p className="text-slate-200 font-semibold mb-1">Deep evaluation in progress</p>
-                <p className="text-slate-400 text-sm">Watch the progress tracker on the left</p>
+                <p className="text-slate-200 font-semibold mb-1">Evaluating your resume</p>
+                <p className="text-slate-400 text-sm">This typically takes 30-60 seconds</p>
               </div>
             )}
 
             {evaluation && (
               <div className="space-y-5">
-                {/* Main Score */}
                 <div className={`bg-gradient-to-br ${mc.bar} rounded-2xl p-7 text-white shadow-2xl`}>
                   <div className="flex items-end justify-between">
                     <div>
-                      <p className="text-white/70 text-sm mb-1">ATS Match Score</p>
+                      <p className="text-white/70 text-sm mb-1">Professional Score</p>
                       <p className="text-7xl font-black leading-none">{mainScore}%</p>
                       <p className="text-white/70 text-sm mt-3">
-                        Raw: {evaluation.totalScore} / {evaluation.maxScore} pts
-                        {evaluation.bonus_points?.total > 0 && ` · Bonus: +${evaluation.bonus_points.total}`}
-                        {evaluation.deductions?.total > 0 && ` · Deductions: -${evaluation.deductions.total}`}
+                        {mainScore >= 80 ? '🎉 Excellent' : mainScore >= 60 ? '✓ Good' : mainScore >= 40 ? '⚠ Fair' : '❌ Needs Work'}
                       </p>
                     </div>
                     <div className="text-right text-white/60 text-sm space-y-1">
-                      <p>{mainScore >= 80 ? '🎉 Excellent' : mainScore >= 60 ? '✓ Good' : mainScore >= 40 ? '⚠ Fair' : '❌ Needs Work'}</p>
-                      <p className="text-xs px-2 py-0.5 rounded-full inline-block" style={{background:'rgba(255,255,255,0.15)'}}>
-                        {evaluation.roleType === 'non-tech' ? '🎯 Non-Technical' : '💻 Technical'}
-                      </p>
-                      {evaluation.github_analyzed && (
-                        <p className="text-xs">
-                          @{evaluation.github_analyzed.username} · {evaluation.github_analyzed.totalProjectsAnalyzed} repos · {evaluation.github_analyzed.topProjectsSelected} analyzed
-                        </p>
-                      )}
+                      <p className="text-base font-semibold">Career Field</p>
+                      <p className="text-lg capitalize">{evaluation.jobRole || 'General'}</p>
+                      {evaluation.bonus_points?.total > 0 && <p className="text-xs pt-2">Bonus: +{evaluation.bonus_points.total}</p>}
+                      {evaluation.deductions?.total > 0 && <p className="text-xs">Deductions: -{evaluation.deductions.total}</p>}
                     </div>
                   </div>
                 </div>
 
-                {/* Score Breakdown */}
                 <div>
                   <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-3">Score Breakdown</p>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -425,7 +346,6 @@ export default function ATSChecker() {
                   </div>
                 </div>
 
-                {/* Bonus & Deductions */}
                 {(evaluation.bonus_points?.total > 0 || evaluation.deductions?.total > 0) && (
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     {evaluation.bonus_points?.total > 0 && (
@@ -443,33 +363,20 @@ export default function ATSChecker() {
                   </div>
                 )}
 
-                <ListSection title="Actionable Recommendations" icon={Lightbulb} items={evaluation.actionable_recommendations}
-                  colorClass="bg-blue-500/10 border-blue-500/30 text-blue-400" bulletColor="text-blue-400" />
                 <ListSection title="Key Strengths" icon={CheckCircle2} items={evaluation.strengths}
                   colorClass="bg-emerald-500/10 border-emerald-500/30 text-emerald-400" bulletColor="text-emerald-400" />
                 <ListSection title="Areas for Improvement" icon={TrendingUp} items={evaluation.improvements}
                   colorClass="bg-amber-500/10 border-amber-500/30 text-amber-400" bulletColor="text-amber-400" />
+                <ListSection title="Actionable Recommendations" icon={Lightbulb} items={evaluation.actionable_recommendations}
+                  colorClass="bg-blue-500/10 border-blue-500/30 text-blue-400" bulletColor="text-blue-400" />
 
-                {evaluation.ats_keywords_missing?.length > 0 && (
+                {evaluation.format_issues?.length > 0 && (
                   <div className="bg-slate-800/60 border border-slate-700 rounded-2xl p-5">
                     <h3 className="text-sm font-bold text-slate-200 mb-3 flex items-center gap-2">
-                      <Tag className="w-4 h-4 text-purple-400" /> Missing ATS Keywords
-                    </h3>
-                    <div className="flex flex-wrap gap-2">
-                      {evaluation.ats_keywords_missing.map((kw, i) => (
-                        <span key={i} className="px-2.5 py-1 bg-purple-500/10 border border-purple-500/30 text-purple-300 rounded-full text-xs">{kw}</span>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {evaluation.resume_format_issues?.length > 0 && (
-                  <div className="bg-slate-800/60 border border-slate-700 rounded-2xl p-5">
-                    <h3 className="text-sm font-bold text-slate-200 mb-3 flex items-center gap-2">
-                      <LayoutTemplate className="w-4 h-4 text-orange-400" /> Resume Format Issues
+                      <LayoutTemplate className="w-4 h-4 text-orange-400" /> Format Issues
                     </h3>
                     <ul className="space-y-1.5">
-                      {evaluation.resume_format_issues.map((issue, i) => (
+                      {evaluation.format_issues.map((issue, i) => (
                         <li key={i} className="text-sm text-slate-300 flex gap-2">
                           <AlertTriangle className="w-3.5 h-3.5 text-orange-400 flex-shrink-0 mt-0.5" />
                           {issue}
