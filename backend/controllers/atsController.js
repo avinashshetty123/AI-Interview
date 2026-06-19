@@ -39,8 +39,8 @@ const PHASE_META = {
   parse_education: { label: 'Parsing Education', desc: 'Degrees, institutions' },
   parse_skills: { label: 'Parsing Skills', desc: 'Professional competencies' },
   parse_projects: { label: 'Parsing Projects', desc: 'Professional projects' },
-  role_detect: { label: 'Detecting Job Role', desc: 'Identifying career field for accurate scoring' },
-  ai_score: { label: 'AI Evaluation', desc: 'Professional ATS scoring' },
+  role_detect: { label: 'Detecting Profession', desc: 'Identifying career field' },
+  ai_score: { label: 'AI Evaluation', desc: 'Professional ATS scoring from base 50' },
   validate: { label: 'Finalizing Results', desc: 'Computing final score' },
 };
 
@@ -100,15 +100,15 @@ exports.evaluateResumePublic = async (req, res) => {
 
     console.log('[ATS] Parsed sections:', Object.keys(structured));
 
-    // Phase: Detect job role
-    sendPhase(res, 'role_detect', 'active', 'Detecting job role for accurate scoring');
+    // Phase: Detect job role with better accuracy
+    sendPhase(res, 'role_detect', 'active', 'Detecting profession from resume');
     const resumeText = buildResumeText(structured);
     const jobRole = await detectJobRole(resumeText);
-    console.log(`[ATS] Detected job role: ${jobRole}`);
+    console.log(`[ATS] Detected profession: ${jobRole}`);
     sendPhase(res, 'role_detect', 'done', `✓ Detected: ${jobRole}`);
 
     // Phase: AI Scoring
-    sendPhase(res, 'ai_score', 'active', 'Running professional ATS evaluation');
+    sendPhase(res, 'ai_score', 'active', 'Running professional ATS evaluation from base 50');
     console.log(`[ATS] Resume text built: ${resumeText.length} chars`);
     console.log(`[ATS] Using extracted metrics for accurate scoring`);
 
@@ -125,31 +125,31 @@ exports.evaluateResumePublic = async (req, res) => {
     const validated = validateScores(parsed);
     const totalScore = computeTotal(validated);
     const baseScore = getBaseScore();
-    const matchPercentage = Math.min(100, Math.round((totalScore / baseScore) * 100));
 
-    console.log(`[ATS] FINAL — role=${jobRole} total=${totalScore}/${baseScore} match=${matchPercentage}%`);
-    sendPhase(res, 'validate', 'done', `✓ Final score: ${matchPercentage}%`);
+    console.log(`[ATS] FINAL — profession=${jobRole} base=${baseScore} total=${totalScore}/100`);
+    sendPhase(res, 'validate', 'done', `✓ Final score: ${totalScore}/100`);
 
     // Send result
     sendResult(res, {
       success: true,
-      score: matchPercentage,
+      score: totalScore,
       totalScore,
-      maxScore: baseScore,
+      maxScore: 100,
+      baseScore: baseScore,
       jobRole,
-      scores: validated.scores,
-      bonus_points: validated.bonus_points,
+      scoreBreakdown: validated.score_breakdown,
+      bonuses: validated.bonuses,
       deductions: validated.deductions,
       strengths: validated.key_strengths,
       improvements: validated.areas_for_improvement,
       actionable_recommendations: validated.actionable_recommendations,
-      format_issues: validated.format_issues,
       content_analysis: {
         total_characters: charCount,
         total_lines: lineCount,
-        work_experience: structured.work?.length > 0,
-        education: structured.education?.length > 0,
-        skills: structured.skills?.length > 0,
+        work_experience: structured.work?.length || 0,
+        education: structured.education?.length || 0,
+        skills: structured.skills?.length || 0,
+        projects: structured.projects?.length || 0,
       },
     });
   } catch (error) {

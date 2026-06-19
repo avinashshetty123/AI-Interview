@@ -73,29 +73,60 @@ const extractJson = (text) => {
   return start !== Infinity ? text.substring(start) : text;
 };
 
+// Enhanced profession/job role detection
 const detectJobRole = async (resumeText) => {
   console.log('[Role] Detecting job role from resume...');
-  const prompt = `Analyze this resume and identify the PRIMARY job role/field. Return ONLY one of these: manager, engineer, designer, sales, marketing, hr, operations, finance, consultant, analyst, admin, other.
+  
+  const resumeLower = resumeText.toLowerCase();
+  
+  // Pattern-based detection (more accurate than just AI)
+  const professionPatterns = {
+    engineer: /(?:software|senior|junior|full[-\s]?stack|frontend|backend|devops|cloud|infrastructure|platform|qa|test|systems|database|ml|ai|data|machine learning|ai engineer|cloud engineer|solutions architect|infrastructure engineer)\s+engineer/gi,
+    manager: /(?:project|product|program|engineering|technical|team|dev|scrum|agile|operations|business|account|sales|brand)\s+manager|manager\s+(?:engineering|project|product|sales|business)|engineering\s+lead|team\s+lead|director|vp\s+(?:engineering|product|sales)|chief\s+(?:technology|product|operating)/gi,
+    designer: /(?:product|ux|ui|graphic|web|interaction|visual|brand|creative|industrial|fashion|interior)\s+designer|design\s+(?:engineer|lead|director)|designer\s+(?:product|ux|ui)|design\s+architect/gi,
+    sales: /sales\s+(?:engineer|executive|representative|manager|director|development|operations)|account\s+(?:executive|manager|representative)|business\s+development|sales\s+lead|bd\s+(?:manager|executive|manager)/gi,
+    marketing: /marketing\s+(?:manager|director|coordinator|specialist|engineer|analyst|director|lead|executive)|product\s+marketing|demand\s+generation|marketing\s+lead|campaign\s+manager|brand\s+manager|content\s+(?:manager|strategist)|seo|sem|demand\s+gen/gi,
+    finance: /(?:financial|accountant|accounts|accounting|tax|audit|budget|treasury|controller|analyst|officer|director)\s+(?:analyst|officer|manager|director)|cfo|finance\s+(?:director|manager|lead|officer)|chartered\s+accountant|cpa/gi,
+    hr: /(?:human\s+resources|hr|talent|recruiting|recruitment|organizational|people|culture|compensation|benefits|employee|learning|development|training)\s+(?:manager|director|specialist|lead|officer|executive|analyst)|recruiter|talent\s+(?:acquisition|manager|lead)|hr\s+(?:director|manager|lead|specialist)/gi,
+    consultant: /consultant|consulting|management\s+consultant|strategy\s+consultant|business\s+consultant|management\s+consulting|advisory|strategy\s+lead|business\s+advisor|advisory\s+board/gi,
+    analyst: /(?:business|data|financial|market|research|systems|quality|security|operations|process|risk|compliance)\s+analyst|analyst\s+(?:business|data|financial)|analytics\s+(?:engineer|lead|manager)|data\s+scientist/gi,
+    operations: /operations\s+(?:manager|director|lead|officer|specialist|analyst)|operations|supply\s+chain|logistics\s+(?:manager|director|specialist)|process\s+(?:engineer|manager|improvement)/gi,
+    admin: /administrative\s+(?:assistant|officer|coordinator|specialist)|office\s+(?:manager|coordinator|assistant)|executive\s+assistant|administration|administrator|data\s+entry/gi
+  };
 
-Resume excerpt:
-${resumeText.substring(0, 1500)}
-
-Respond with ONLY the role name, nothing else.`;
-
-  try {
-    const result = await callGroq(
-      'You identify job roles from resumes. Respond with ONLY the role name.',
-      prompt,
-      50,
-      'role-detect'
-    );
-    const role = result.toLowerCase().trim();
-    const validRoles = ['manager', 'engineer', 'designer', 'sales', 'marketing', 'hr', 'operations', 'finance', 'consultant', 'analyst', 'admin'];
-    return validRoles.includes(role) ? role : 'other';
-  } catch (e) {
-    console.log('[Role] Detection failed, defaulting to other');
-    return 'other';
+  // Count matches for each profession
+  let maxMatches = 0;
+  let detectedRole = 'other';
+  
+  for (const [role, pattern] of Object.entries(professionPatterns)) {
+    const matches = (resumeLower.match(pattern) || []).length;
+    console.log(`[Role] ${role}: ${matches} keyword matches`);
+    if (matches > maxMatches) {
+      maxMatches = matches;
+      detectedRole = role;
+    }
   }
+  
+  // If no strong pattern match, use AI as fallback
+  if (maxMatches < 2) {
+    console.log('[Role] No strong pattern match, using AI...');
+    try {
+      const result = await callGroq(
+        'You identify job roles from resumes. Respond with ONLY the role name.',
+        `Analyze this resume and identify the PRIMARY job role/field. Return ONLY one of these: manager, engineer, designer, sales, marketing, hr, operations, finance, consultant, analyst, admin, other.\n\nResume:\n${resumeText.substring(0, 1500)}`,
+        50,
+        'role-detect'
+      );
+      const role = result.toLowerCase().trim();
+      const validRoles = ['manager', 'engineer', 'designer', 'sales', 'marketing', 'hr', 'operations', 'finance', 'consultant', 'analyst', 'admin'];
+      detectedRole = validRoles.includes(role) ? role : 'other';
+    } catch (e) {
+      console.log('[Role] AI detection failed, keeping pattern result');
+    }
+  }
+  
+  console.log(`[Role] Detected role: ${detectedRole}`);
+  return detectedRole;
 };
 
 const extractBasics = (sections) => {
@@ -224,7 +255,6 @@ const parseResumeToStructured = async (resumeText, onSectionStart, onSectionDone
   console.log('[Parse] Parsing resume structure with enhanced extraction...');
   
   try {
-    // Use resumeParser for initial extraction
     const sections = resumeParser.extractSections(resumeText);
     
     const structured = {
@@ -308,60 +338,50 @@ const buildResumeText = (resumeData) => {
   return lines.join('\n');
 };
 
-const EVAL_SYSTEM_PROMPT = `You are an expert professional ATS evaluator. Score resumes accurately based on PROFESSIONAL STANDARDS.
+const EVAL_SYSTEM_PROMPT = `You are an expert professional ATS evaluator. Score resumes starting from BASE SCORE of 50.
+
+Improvements add points. Poor metrics lose points. Base = 50, Max = 100.
 
 Return ONLY valid JSON. No explanations, no markdown.
 
-SCORING CRITERIA (0-100 total):
-1. experience_quality (0-30): Depth, progression, quantified achievements, leadership
-   - Entry level (0-2 years): 5-12pts
-   - Mid-level (2-5 years): 12-20pts
-   - Senior/Manager (5+ years): 20-30pts
+SCORING FROM BASE 50:
+1. experience_quality (+0 to +15): Years and progression
+   - 0-2 years: +0 to +5
+   - 2-5 years: +5 to +10
+   - 5+ years: +10 to +15
 
-2. skill_relevance (0-25): Domain expertise, certifications, tools matching role
-   - Score based on ACTUAL job field, not irrelevant fields
-   - Manager: leadership, strategy, communication, budget
-   - Engineer: technical stack, architecture, problem-solving
-   - Designer: design tools, UX/UI principles, creative portfolio
-   - Sales: CRM, negotiation, pipeline management
-   - (NOT tech skills for non-tech roles)
+2. skill_relevance (+0 to +15): Skills matching actual job role
+   - Few relevant skills: +0 to +5
+   - Some relevant skills: +5 to +10
+   - Many relevant skills: +10 to +15
 
-3. achievement_metrics (0-20): Quantified results, ROI, impact
-   - Revenue/cost saved/efficiency gained
-   - Team size managed
-   - Projects completed
-   - Vague descriptions = 1-5pts, specific metrics = 15-20pts
+3. achievement_metrics (+0 to +12): Quantified results
+   - Vague descriptions: +0 to +3
+   - Some metrics: +3 to +7
+   - Strong metrics ($, %, scale): +7 to +12
 
-4. presentation_quality (0-15): Clarity, grammar, structure, formatting
-   - Professional language, no errors: 13-15pts
-   - Minor issues: 10-12pts
-   - Multiple errors/poor structure: 5-9pts
+4. presentation_quality (+0 to +10): Grammar, formatting
+   - Poor: +0 to +3
+   - Good: +3 to +7
+   - Excellent: +7 to +10
 
-5. completeness (0-10): All sections present, no gaps
-   - All sections: 8-10pts
-   - Missing 1 section: 5-7pts
-   - Multiple missing: 1-4pts
+5. completeness (+0 to +8): Sections present
+   - Minimal sections: +0 to +3
+   - Most sections: +3 to +6
+   - All sections: +6 to +8
 
-BONUS (max 5pts):
+BONUSES (+0 to +5):
 - Certifications: +1
-- Awards/recognition: +1
-- Volunteer leadership: +1
-- Publications/case studies: +1
+- Awards: +1
+- Leadership experience: +1
+- Published work: +1
 - Modern formatting: +1
 
-DEDUCTIONS (max 10pts):
-- Grammar/spelling: -1 to -3
-- Unexplained gaps >6mo: -2
-- Inconsistent dates: -2
-- Broken links: -1 each
+DEDUCTIONS (-0 to -8):
+- Grammar errors: -1 to -2
+- Employment gaps: -1 to -2
 - Vague descriptions: -1 to -2
-
-ACCURACY RULES:
-- Do NOT score tech skills for managers/sales/HR roles
-- Do NOT penalize for missing irrelevant skills
-- Do NOT assume education level = capability
-- IGNORE: name, age, location, appearance
-- FOCUS: actual professional experience and achievements`;
+- Format issues: -0 to -2`;
 
 const buildEvalPrompt = (resumeText, jobRole, structured) => {
   const t = resumeText.length > 3500 ? resumeText.substring(0, 3500) + '\n[truncated]' : resumeText;
@@ -379,6 +399,8 @@ const buildEvalPrompt = (resumeText, jobRole, structured) => {
 - Projects: ${projectCount}
 - Certifications: ${certCount}
 
+DETECTED PROFESSION: ${jobRole}
+
 SKILL CATEGORIES: ${structured.skills?.map(s => s.name).slice(0, 20).join(', ') || 'None'}
 
 EXPERIENCE TIMELINE:
@@ -387,83 +409,98 @@ ${(structured.work || []).slice(0, 5).map((w, i) => `${i+1}. ${w.position} at ${
 EDUCATION:
 ${(structured.education || []).map((e, i) => `${i+1}. ${e.studyType} in ${e.area}`).join('\n') || 'None'}`;
 
-  return `Score this resume for a ${jobRole} professional. Use this extracted data context:
+  return `Score this ${jobRole} professional's resume STARTING FROM BASE 50. Add improvements, deduct weaknesses. Max = 100.
 
 ${context}
 
 Return ONLY this exact JSON structure with NO extra text:
 {
-  "scores": {
-    "experience_quality": {"score": 0, "max": 30, "evidence": ""},
-    "skill_relevance": {"score": 0, "max": 25, "evidence": ""},
-    "achievement_metrics": {"score": 0, "max": 20, "evidence": ""},
-    "presentation_quality": {"score": 0, "max": 15, "evidence": ""},
-    "completeness": {"score": 0, "max": 10, "evidence": ""}
+  "base_score": 50,
+  "score_breakdown": {
+    "experience_quality": {"improvement": 0, "max": 15, "evidence": ""},
+    "skill_relevance": {"improvement": 0, "max": 15, "evidence": ""},
+    "achievement_metrics": {"improvement": 0, "max": 12, "evidence": ""},
+    "presentation_quality": {"improvement": 0, "max": 10, "evidence": ""},
+    "completeness": {"improvement": 0, "max": 8, "evidence": ""}
   },
-  "bonus_points": {"total": 0, "breakdown": ""},
+  "bonuses": {"total": 0, "breakdown": ""},
   "deductions": {"total": 0, "reasons": ""},
   "key_strengths": [],
   "areas_for_improvement": [],
   "actionable_recommendations": [],
-  "format_issues": [],
-  "detected_role": "${jobRole}"
+  "detected_role": "${jobRole}",
+  "final_score": 50
 }
 
-EVALUATION RULES FOR THIS RESUME:
-- ${workExp} work experiences found: score 5-12pts for entry (0-2yrs), 12-20pts for mid (2-5yrs), 20-30pts for senior (5+yrs)
-- ${skillCount} skills found: evaluate relevance to ${jobRole} role only
-- ${projectCount} projects: check for quantifiable metrics and impact
-- ${eduCount} education entries: verify completeness
+EVALUATION RULES:
+- BASE SCORE: 50 (starting point for all resumes)
+- ${workExp} work experiences: evaluate progression quality
+- ${skillCount} skills found: are they relevant to ${jobRole}?
+- ${projectCount} projects: do they have quantifiable metrics?
+- ${eduCount} education entries: is it strong/relevant?
 - Check for explicit metrics (%, $, numbers) in descriptions
 
-IMPORTANT:
-- DO NOT give high scores for vague descriptions without metrics
-- DO NOT score irrelevant skills for this role
-- Verify actual data from resume text below, not assumptions
-- Be strict on achievement_metrics - require specific numbers
+SCORING GUIDANCE FOR ${jobRole}:
+- experience_quality: Award points for years and progression (${workExp} roles found)
+- skill_relevance: Award for skills matching ${jobRole} role specifically
+- achievement_metrics: Award for quantifiable results ($, %, scale)
+- presentation_quality: Award for clear writing and professional formatting
+- completeness: Award for having all important sections
 
 Resume text:
 ${t}`;
 };
 
 const validateScores = (evaluation) => {
+  evaluation.base_score = 50;
+  
+  evaluation.score_breakdown = evaluation.score_breakdown || {};
   const categories = {
-    experience_quality: 30,
-    skill_relevance: 25,
-    achievement_metrics: 20,
-    presentation_quality: 15,
-    completeness: 10,
+    experience_quality: 15,
+    skill_relevance: 15,
+    achievement_metrics: 12,
+    presentation_quality: 10,
+    completeness: 8
   };
 
-  evaluation.scores = evaluation.scores || {};
   for (const [key, max] of Object.entries(categories)) {
-    if (!evaluation.scores[key]) evaluation.scores[key] = { score: 0, max, evidence: '' };
-    const score = Number(evaluation.scores[key].score) || 0;
-    evaluation.scores[key].score = Math.max(0, Math.min(max, score));
-    evaluation.scores[key].max = max;
-    evaluation.scores[key].evidence = (evaluation.scores[key].evidence || '').substring(0, 400);
+    if (!evaluation.score_breakdown[key]) {
+      evaluation.score_breakdown[key] = { improvement: 0, max, evidence: '' };
+    }
+    const improvement = Number(evaluation.score_breakdown[key].improvement) || 0;
+    evaluation.score_breakdown[key].improvement = Math.max(0, Math.min(max, improvement));
+    evaluation.score_breakdown[key].max = max;
+    evaluation.score_breakdown[key].evidence = (evaluation.score_breakdown[key].evidence || '').substring(0, 400);
   }
 
-  if (!evaluation.bonus_points) evaluation.bonus_points = { total: 0, breakdown: '' };
-  evaluation.bonus_points.total = Math.max(0, Math.min(5, Number(evaluation.bonus_points.total) || 0));
+  if (!evaluation.bonuses) evaluation.bonuses = { total: 0, breakdown: '' };
+  evaluation.bonuses.total = Math.max(0, Math.min(5, Number(evaluation.bonuses.total) || 0));
 
   if (!evaluation.deductions) evaluation.deductions = { total: 0, reasons: '' };
-  evaluation.deductions.total = Math.max(0, Math.min(10, Number(evaluation.deductions.total) || 0));
+  evaluation.deductions.total = Math.max(0, Math.min(8, Number(evaluation.deductions.total) || 0));
 
-  ['key_strengths', 'areas_for_improvement', 'actionable_recommendations', 'format_issues']
+  ['key_strengths', 'areas_for_improvement', 'actionable_recommendations']
     .forEach((k) => { if (!Array.isArray(evaluation[k])) evaluation[k] = []; });
 
   return evaluation;
 };
 
 const computeTotal = (evaluation) => {
-  let total = Object.values(evaluation.scores).reduce((s, c) => s + (c.score || 0), 0);
-  total += evaluation.bonus_points.total;
-  total -= evaluation.deductions.total;
+  let total = evaluation.base_score || 50;
+  
+  if (evaluation.score_breakdown) {
+    Object.values(evaluation.score_breakdown).forEach(cat => {
+      total += (cat.improvement || 0);
+    });
+  }
+  
+  total += (evaluation.bonuses?.total || 0);
+  total -= (evaluation.deductions?.total || 0);
+  
   return Math.max(0, Math.min(100, total));
 };
 
-const getBaseScore = () => 100;
+const getBaseScore = () => 50;
 
 module.exports = {
   parseResumeToStructured,
